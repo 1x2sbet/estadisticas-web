@@ -9,7 +9,7 @@ st.set_page_config(
 # -------------------------------
 # BARRA LATERAL (MENÚ)
 # -------------------------------
-st.sidebar.title("📊 Menú")
+st.sidebar.title("📊 1X2SBET")
 
 opcion = st.sidebar.radio(
     "Navegación",
