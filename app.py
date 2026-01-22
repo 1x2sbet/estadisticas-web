@@ -1,50 +1,78 @@
-import streamlit as st
-import pandas as pd
-
-st.set_page_config(
-    page_title="Panel Estadístico",
-    layout="wide"
-)
-
 # -------------------------------
-# BARRA LATERAL (MENÚ)
+# MENÚ LATERAL
 # -------------------------------
-st.sidebar.title("📊 1X2SBET")
+st.sidebar.title("⚽ 1X2sBet")
 
-opcion = st.sidebar.radio(
+seccion = st.sidebar.radio(
     "Navegación",
-    ["Inicio", "Tablas", "Análisis", "Configuración"]
+    [
+        "🏠 Inicio",
+        "⚙️ Preferencias",
+        "📊 Análisis",
+        "🧮 Herramientas",
+        "💼 Gestión"
+    ]
 )
 
 # -------------------------------
 # CONTENIDO PRINCIPAL
 # -------------------------------
-if opcion == "Inicio":
-    st.title("📊 Plataforma de Análisis Estadístico")
-    st.write("""
-    Bienvenido a la plataforma.
 
-    Aquí podrás consultar tablas y análisis estadísticos
-    generados automáticamente desde distintas fuentes.
-    """)
+if seccion == "🏠 Inicio":
+    st.title("⚽ 1X2sBet")
+    st.write("Plataforma de análisis estadístico y gestión de apuestas.")
 
-elif opcion == "Tablas":
-    st.title("📋 Tablas estadísticas")
-
-    df = pd.read_csv("data/datos_prueba.csv")
-    st.dataframe(df, use_container_width=True)
-
-elif opcion == "Análisis":
-    st.title("📈 Análisis básico")
-
-    df = pd.read_csv("data/datos_prueba.csv")
-
-    st.bar_chart(
-        df.set_index("Partido")[["Prob_Local", "Prob_Empate", "Prob_Visitante"]]
+# -------- PREFERENCIAS --------
+elif seccion == "⚙️ Preferencias":
+    submenu = st.selectbox(
+        "Preferencias",
+        ["Casas de Apuestas", "Ligas"]
     )
 
-elif opcion == "Configuración":
-    st.title("⚙️ Configuración")
-    st.write("Opciones de usuario y preferencias (próximamente)")
+    if submenu == "Casas de Apuestas":
+        st.title("🏦 Casas de Apuestas")
+        st.info("Configuración y selección de casas de apuestas.")
 
+    elif submenu == "Ligas":
+        st.title("🏆 Ligas")
+        st.info("Selección de ligas a analizar.")
+
+# -------- ANÁLISIS --------
+elif seccion == "📊 Análisis":
+    submenu = st.selectbox(
+        "Tipo de análisis",
+        [
+            "Análisis Ordenado",
+            "Surebet",
+            "Doble Oportunidad",
+            "Apuestas de Valor"
+        ]
+    )
+
+    st.title(f"📊 {submenu}")
+    st.info(f"Módulo de {submenu.lower()} (en construcción).")
+
+# -------- HERRAMIENTAS --------
+elif seccion == "🧮 Herramientas":
+    submenu = st.selectbox(
+        "Herramientas",
+        ["Calculadora", "Convertidor de Bonos"]
+    )
+
+    st.title(f"🧮 {submenu}")
+    st.info(f"Herramienta: {submenu.lower()}.")
+
+# -------- GESTIÓN --------
+elif seccion == "💼 Gestión":
+    submenu = st.selectbox(
+        "Gestión",
+        [
+            "Control de Apuestas",
+            "Historial de Transacciones",
+            "Informe Anual"
+        ]
+    )
+
+    st.title(f"💼 {submenu}")
+    st.info(f"Sección de {submenu.lower()}.")
 
