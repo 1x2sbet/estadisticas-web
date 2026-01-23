@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import os
 
 # ---------------------------------
 # CONFIGURACIÓN GENERAL
@@ -12,11 +11,20 @@ st.set_page_config(
 )
 
 # ---------------------------------
+# GOOGLE SHEETS (BASE DE DATOS)
+# ---------------------------------
+LIGAS_CSV_URL = (
+    "https://docs.google.com/spreadsheets/d/e/"
+    "2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/"
+    "pub?output=csv"
+)
+
+# ---------------------------------
 # MENÚ LATERAL
 # ---------------------------------
 st.sidebar.title("⚽ 1X2sBet")
 
-seccion = st.sidebar.radio(
+menu = st.sidebar.radio(
     "Navegación",
     [
         "🏠 Inicio",
@@ -31,14 +39,20 @@ seccion = st.sidebar.radio(
 # ---------------------------------
 # INICIO
 # ---------------------------------
-if seccion == "🏠 Inicio":
+if menu == "🏠 Inicio":
     st.title("📊 Plataforma de Análisis Estadístico")
-    st.write("Bienvenido a **1X2sBet**.")
+    st.write(
+        """
+        Bienvenido a **1X2sBet**.  
+        Plataforma de análisis estadístico deportivo basada en datos
+        automáticos procesados con Python.
+        """
+    )
 
 # ---------------------------------
 # CASAS DE APUESTAS
 # ---------------------------------
-elif seccion == "🏦 Casas de Apuestas":
+elif menu == "🏦 Casas de Apuestas":
 
     st.title("🏦 Casas de Apuestas Legales en Colombia")
 
@@ -64,8 +78,10 @@ elif seccion == "🏦 Casas de Apuestas":
 
     for casa, logo in casas.items():
         col1, col2 = st.columns([1, 6])
+
         with col1:
             st.image(logo, width=35)
+
         with col2:
             st.session_state.casas_activas[casa] = st.checkbox(
                 casa,
@@ -73,68 +89,74 @@ elif seccion == "🏦 Casas de Apuestas":
                 key=f"casa_{casa}"
             )
 
+    st.success("Preferencias de casas guardadas")
+
 # ---------------------------------
-# LIGAS DESPLEGABLES
+# LIGAS (GOOGLE SHEETS)
 # ---------------------------------
-elif seccion == "🏆 Ligas":
+elif menu == "🏆 Ligas":
 
     st.title("🏆 Ligas a Analizar")
-    st.write("Despliega por continente y país para activar ligas.")
+    st.caption("🌍 Continente → 🏳️ País → ⚽ Ligas")
 
-    ruta_csv = "data/data/ligas.csv"
-
-    if not os.path.exists(ruta_csv):
-        st.error("❌ No se encontró el archivo data/data/ligas.csv")
+    try:
+        df = pd.read_csv(LIGAS_CSV_URL)
+    except Exception as e:
+        st.error("❌ No se pudo cargar la base de datos desde Google Sheets")
         st.stop()
 
-    df = pd.read_csv(ruta_csv)
+    # Normalizar columnas
+    df.columns = df.columns.str.lower()
 
-    # LIMPIEZA CRÍTICA (ESTO SOLUCIONA EL ERROR)
-    df.columns = df.columns.str.strip().str.lower()
-    df = df.dropna(subset=["continente", "pais", "liga"])
-    df["continente"] = df["continente"].astype(str)
-    df["pais"] = df["pais"].astype(str)
-    df["liga"] = df["liga"].astype(str)
+    columnas_requeridas = {"continente", "pais", "liga", "activa"}
+    if not columnas_requeridas.issubset(df.columns):
+        st.error("❌ La hoja debe tener: continente, pais, liga, activa")
+        st.stop()
 
     if "ligas_activas" not in st.session_state:
         st.session_state.ligas_activas = {}
 
-    # CONTINENTES
-    for continente in sorted(df["continente"].unique().tolist()):
+    # -------- ESTRUCTURA DESPLEGABLE --------
+    for continente in sorted(df["continente"].dropna().unique()):
+
         with st.expander(f"🌍 {continente}", expanded=False):
 
             df_cont = df[df["continente"] == continente]
 
-            # PAÍSES
-            for pais in sorted(df_cont["pais"].unique().tolist()):
-                with st.expander(f"🏳️ {pais}", expanded=False):
+            for pais in sorted(df_cont["pais"].dropna().unique()):
+                st.markdown(f"### 🏳️ {pais}")
 
-                    df_pais = df_cont[df_cont["pais"] == pais]
+                df_pais = df_cont[df_cont["pais"] == pais]
 
-                    # LIGAS
-                    for _, row in df_pais.iterrows():
-                        liga = row["liga"]
-                        activa = bool(row.get("activa", True))
+                for _, row in df_pais.iterrows():
+                    liga = row["liga"]
+                    activa = bool(row["activa"])
 
-                        st.session_state.ligas_activas[liga] = st.checkbox(
-                            liga,
-                            value=st.session_state.ligas_activas.get(liga, activa),
-                            key=f"liga_{continente}_{pais}_{liga}"
-                        )
+                    st.session_state.ligas_activas[liga] = st.checkbox(
+                        liga,
+                        value=st.session_state.ligas_activas.get(liga, activa),
+                        key=f"liga_{liga}"
+                    )
 
-    st.success("✅ Ligas cargadas correctamente.")
+    st.success("Ligas cargadas correctamente desde Google Sheets")
 
 # ---------------------------------
-# OTROS MÓDULOS
+# ANÁLISIS
 # ---------------------------------
-elif seccion == "📊 Análisis":
+elif menu == "📊 Análisis":
     st.title("📊 Análisis")
-    st.info("En construcción")
+    st.info("Módulo en construcción")
 
-elif seccion == "🧮 Herramientas":
+# ---------------------------------
+# HERRAMIENTAS
+# ---------------------------------
+elif menu == "🧮 Herramientas":
     st.title("🧮 Herramientas")
-    st.info("En construcción")
+    st.info("Módulo en construcción")
 
-elif seccion == "💼 Gestión":
+# ---------------------------------
+# GESTIÓN
+# ---------------------------------
+elif menu == "💼 Gestión":
     st.title("💼 Gestión")
-    st.info("En construcción")
+    st.info("Módulo en construcción")
