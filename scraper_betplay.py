@@ -1,11 +1,11 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime
+from datetime import datetime, timedelta
 import pandas as pd
 import os
 import json
 import re
-from playwright.sync_api import sync_playwright
+from playwright.sync_api import sync_playwright, TimeoutError
 import pytz
 
 # ==============================
@@ -42,30 +42,47 @@ gc = gspread.authorize(creds)
 def leer_ligas():
     df = pd.read_csv(URL_LIGAS_CSV)
     df.columns = [c.strip().upper() for c in df.columns]
+
+    # Normalizar ENCENDIDO
+    df["ENCENDIDO"] = df["ENCENDIDO"].astype(str).str.upper().isin(["TRUE", "1", "SI", "YES"])
     df["FILA_REAL"] = df.index + 2
+
     return df
 
 # ==============================
-# SCRAPER BETPLAY REAL
+# SCRAPER BETPLAY
 # ==============================
+
+def limpiar_cuota(txt):
+    if not txt:
+        return ""
+    m = re.search(r"\d+(\.\d+)?", txt.replace(",", "."))
+    return m.group(0) if m else ""
 
 def extraer_partidos(page, pais, liga, url):
     partidos = []
 
     try:
         page.goto(url, timeout=60000)
-        page.wait_for_timeout(8000)
+        page.wait_for_selector(
+            "li.KambiBC-sandwich-filter__event-list-item",
+            timeout=30000
+        )
 
-        items = page.query_selector_all("li.KambiBC-sandwich-filter__event-list-item")
+        items = page.query_selector_all(
+            "li.KambiBC-sandwich-filter__event-list-item"
+        )
 
-        if not items:
-            return []
+        hoy = datetime.now(TZ_BOGOTA).date()
 
         for p in items:
             try:
                 equipos = p.query_selector_all(
                     "div.KambiBC-event-participants__name-participant-name"
                 )
+                if len(equipos) < 2:
+                    continue
+
                 local = equipos[0].inner_text().strip()
                 visitante = equipos[1].inner_text().strip()
 
@@ -75,12 +92,10 @@ def extraer_partidos(page, pais, liga, url):
                 fecha_txt = fecha_span.inner_text().strip() if fecha_span else ""
                 hora_txt = hora_span.inner_text().strip() if hora_span else ""
 
-                hoy = datetime.now(TZ_BOGOTA).date()
-
-                if "Hoy" in fecha_txt or "hoy" in fecha_txt:
+                if "HOY" in fecha_txt.upper():
                     fecha = hoy.strftime("%d/%m/%Y")
-                elif "Mañana" in fecha_txt or "mañana" in fecha_txt:
-                    fecha = (hoy.replace(day=hoy.day + 1)).strftime("%d/%m/%Y")
+                elif "MAÑANA" in fecha_txt.upper():
+                    fecha = (hoy + timedelta(days=1)).strftime("%d/%m/%Y")
                 else:
                     fecha = fecha_txt
 
@@ -88,9 +103,9 @@ def extraer_partidos(page, pais, liga, url):
                     "div.KambiBC-bet-offer--onecrosstwo button.KambiBC-betty-outcome"
                 )
 
-                c1 = cuotas[0].inner_text().strip() if len(cuotas) > 0 else ""
-                cx = cuotas[1].inner_text().strip() if len(cuotas) > 1 else ""
-                c2 = cuotas[2].inner_text().strip() if len(cuotas) > 2 else ""
+                c1 = limpiar_cuota(cuotas[0].inner_text()) if len(cuotas) > 0 else ""
+                cx = limpiar_cuota(cuotas[1].inner_text()) if len(cuotas) > 1 else ""
+                c2 = limpiar_cuota(cuotas[2].inner_text()) if len(cuotas) > 2 else ""
 
                 partidos.append([
                     pais, liga, fecha, hora_txt,
@@ -102,10 +117,10 @@ def extraer_partidos(page, pais, liga, url):
             except:
                 continue
 
-        return partidos
+    except TimeoutError:
+        pass
 
-    except:
-        return []
+    return partidos
 
 # ==============================
 # RESPALDAR ULTIMO → PREVIO
@@ -147,23 +162,23 @@ def actualizar_np(ligas_df, np_dict):
     ws = sh.worksheet(HOJA_NP)
 
     headers = ws.row_values(1)
-    col_np = headers.index("NP BETPLAY") + 1
+    if "NP BETPLAY" not in headers:
+        return
 
+    col_np = headers.index("NP BETPLAY") + 1
     updates = []
 
     for _, row in ligas_df.iterrows():
         fila = int(row["FILA_REAL"])
-        if row["ENCENDIDO"] is True:
-            val = np_dict.get(row["BETPLAY"], "")
-        else:
-            val = ""
+        val = np_dict.get(row["BETPLAY"], "") if row["ENCENDIDO"] else ""
 
         updates.append({
             "range": gspread.utils.rowcol_to_a1(fila, col_np),
             "values": [[val]]
         })
 
-    ws.batch_update(updates)
+    if updates:
+        ws.batch_update(updates)
 
 # ==============================
 # FECHAS
@@ -192,26 +207,28 @@ def actualizar_fechas(np_total):
 
 def main():
     ligas = leer_ligas()
-
     todos = []
     np_por_liga = {}
 
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
+        context = browser.new_context()
 
         for _, row in ligas.iterrows():
-            if row["ENCENDIDO"] is True:
-                page = browser.new_page()
-                partidos = extraer_partidos(
-                    page,
-                    row["PAIS"],
-                    row["LIGA"],
-                    row["BETPLAY"]
-                )
-                page.close()
+            if not row["ENCENDIDO"]:
+                continue
 
-                todos.extend(partidos)
-                np_por_liga[row["BETPLAY"]] = len(partidos)
+            page = context.new_page()
+            partidos = extraer_partidos(
+                page,
+                row["PAIS"],
+                row["LIGA"],
+                row["BETPLAY"]
+            )
+            page.close()
+
+            todos.extend(partidos)
+            np_por_liga[row["BETPLAY"]] = len(partidos)
 
         browser.close()
 
@@ -220,7 +237,7 @@ def main():
     actualizar_np(ligas, np_por_liga)
     actualizar_fechas(len(todos))
 
-    print("✅ BETPLAY actualizado correctamente")
+    print(f"✅ BETPLAY actualizado correctamente | Partidos: {len(todos)}")
 
 if __name__ == "__main__":
     main()
