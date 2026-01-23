@@ -1,2 +1,5 @@
-streamlit
 pandas
+playwright
+gspread
+oauth2client
+openpyxl
