@@ -29,17 +29,15 @@ seccion = st.sidebar.radio(
 )
 
 # ---------------------------------
-# CONTENIDO
+# INICIO
 # ---------------------------------
-
-# ========= INICIO =========
 if seccion == "🏠 Inicio":
     st.title("📊 Plataforma de Análisis Estadístico")
-    st.write(
-        "Bienvenido a **1X2sBet**. Plataforma de análisis estadístico deportivo."
-    )
+    st.write("Bienvenido a **1X2sBet**.")
 
-# ========= CASAS DE APUESTAS =========
+# ---------------------------------
+# CASAS DE APUESTAS
+# ---------------------------------
 elif seccion == "🏦 Casas de Apuestas":
 
     st.title("🏦 Casas de Apuestas Legales en Colombia")
@@ -75,7 +73,9 @@ elif seccion == "🏦 Casas de Apuestas":
                 key=f"casa_{casa}"
             )
 
-# ========= LIGAS DESPLEGABLES =========
+# ---------------------------------
+# LIGAS DESPLEGABLES
+# ---------------------------------
 elif seccion == "🏆 Ligas":
 
     st.title("🏆 Ligas a Analizar")
@@ -89,20 +89,24 @@ elif seccion == "🏆 Ligas":
 
     df = pd.read_csv(ruta_csv)
 
-    # Normalizar columnas
+    # LIMPIEZA CRÍTICA (ESTO SOLUCIONA EL ERROR)
     df.columns = df.columns.str.strip().str.lower()
+    df = df.dropna(subset=["continente", "pais", "liga"])
+    df["continente"] = df["continente"].astype(str)
+    df["pais"] = df["pais"].astype(str)
+    df["liga"] = df["liga"].astype(str)
 
     if "ligas_activas" not in st.session_state:
         st.session_state.ligas_activas = {}
 
     # CONTINENTES
-    for continente in sorted(df["continente"].unique()):
+    for continente in sorted(df["continente"].unique().tolist()):
         with st.expander(f"🌍 {continente}", expanded=False):
 
             df_cont = df[df["continente"] == continente]
 
             # PAÍSES
-            for pais in sorted(df_cont["pais"].unique()):
+            for pais in sorted(df_cont["pais"].unique().tolist()):
                 with st.expander(f"🏳️ {pais}", expanded=False):
 
                     df_pais = df_cont[df_cont["pais"] == pais]
@@ -110,7 +114,7 @@ elif seccion == "🏆 Ligas":
                     # LIGAS
                     for _, row in df_pais.iterrows():
                         liga = row["liga"]
-                        activa = bool(row["activa"])
+                        activa = bool(row.get("activa", True))
 
                         st.session_state.ligas_activas[liga] = st.checkbox(
                             liga,
@@ -118,19 +122,19 @@ elif seccion == "🏆 Ligas":
                             key=f"liga_{continente}_{pais}_{liga}"
                         )
 
-    st.success("Ligas cargadas correctamente.")
+    st.success("✅ Ligas cargadas correctamente.")
 
-# ========= ANÁLISIS =========
+# ---------------------------------
+# OTROS MÓDULOS
+# ---------------------------------
 elif seccion == "📊 Análisis":
     st.title("📊 Análisis")
-    st.info("Módulo en construcción.")
+    st.info("En construcción")
 
-# ========= HERRAMIENTAS =========
 elif seccion == "🧮 Herramientas":
     st.title("🧮 Herramientas")
-    st.info("Herramientas en construcción.")
+    st.info("En construcción")
 
-# ========= GESTIÓN =========
 elif seccion == "💼 Gestión":
     st.title("💼 Gestión")
-    st.info("Módulo en construcción.")
+    st.info("En construcción")
