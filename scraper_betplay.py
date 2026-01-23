@@ -19,11 +19,13 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
 gc = gspread.authorize(creds)
 
 # URLs de Google Sheets
-# LIGAS sigue siendo CSV publicado
-URL_LIGAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
-
-# BETPLAY y DATOS HORARIOS deben usar la URL de edición
+# CSV publicado para leer ligas activas
+URL_LIGAS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
+# URL de edición para gspread (actualización NP BETPLAY)
+URL_LIGAS_EDIT = "https://docs.google.com/spreadsheets/d/1XXXXX/edit#gid=0"  # <-- reemplaza 1XXXXX con el ID real de tu hoja LIGAS
+# URL de edición para BETPLAY
 URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit#gid=0"
+# URL de edición para DATOS HORARIOS
 URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/1Uwty-fiIWzodWywxk9DIyDU7n_27__bL8X-RADwesa8/edit#gid=0"
 
 # ------------------------------
@@ -31,8 +33,8 @@ URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/1Uwty-fiIWzodWywxk9
 # ------------------------------
 
 def leer_ligas():
-    """Leer ligas activas desde Google Sheets"""
-    df = pd.read_csv(URL_LIGAS)
+    """Leer ligas activas desde Google Sheets (CSV publicado)"""
+    df = pd.read_csv(URL_LIGAS_CSV)
     df.columns = [c.strip().upper() for c in df.columns]
     df = df[df['ENCENDIDO'] == True]
     urls = df[['LIGA', 'BETPLAY']].dropna()
@@ -48,23 +50,23 @@ def formatear_fecha_hora(fecha_texto, hora_texto):
     elif fecha_texto in ['mañana']:
         fecha = hoy + timedelta(days=1)
     else:
+        # intentar parsear fecha explícita, asumiendo formato dd/mm/yyyy
         try:
             fecha = datetime.strptime(fecha_texto, "%d/%m/%Y")
         except:
             fecha = hoy  # fallback
-
+    # hora
     try:
         hora = datetime.strptime(hora_texto, "%H:%M").time()
     except:
         hora = datetime.strptime("00:00", "%H:%M").time()
-
     fecha_formato = fecha.strftime("%d/%m/%Y")
     hora_formato = hora.strftime("%H:%M")
     return fecha_formato, hora_formato
 
 def actualizar_np_ligas(np_por_liga):
-    """Actualiza la columna NP BETPLAY en la hoja LIGAS"""
-    sheet = gc.open_by_url(URL_LIGAS).worksheet("LIGA")
+    """Actualiza la columna NP BETPLAY en la hoja LIGAS usando URL de edición"""
+    sheet = gc.open_by_url(URL_LIGAS_EDIT).worksheet("LIGA")
     data = sheet.get_all_records()
     for idx, row in enumerate(data, start=2):
         liga = row.get('LIGA', '')
@@ -99,12 +101,15 @@ def main():
     urls = leer_ligas()
     print(f"✅ {len(urls)} ligas activas encontradas.")
 
+    # Aquí iría tu lógica de extracción con Playwright (o requests)
+    # Por simplicidad, simulamos extracción
     resultados = []
     np_por_liga = {}
 
     for idx, row in urls.iterrows():
         liga = row['LIGA']
         link = row['BETPLAY']
+        # Simular extracción
         print(f"Extrayendo partidos de {liga} ({link}) ...")
         cantidad = 5  # simulamos 5 partidos
         np_por_liga[liga] = cantidad
@@ -124,18 +129,22 @@ def main():
                 "C MENOS": ""
             })
 
+    # Guardar respaldo de BETPLAYULTIMO
     print("💾 Respaldando BETPLAYULTIMO a BETPLAYPREVIO...")
     respaldar_betplay("BETPLAYULTIMO")
 
+    # Guardar nuevos datos en BETPLAYULTIMO
     print("💾 Actualizando BETPLAYULTIMO...")
     sh = gc.open_by_url(URL_BETPLAY).worksheet("BETPLAYULTIMO")
     df_nuevo = pd.DataFrame(resultados)
     sh.clear()
     sh.update([df_nuevo.columns.values.tolist()] + df_nuevo.values.tolist())
 
+    # Actualizar NP BETPLAY
     print("🔢 Actualizando NP BETPLAY...")
     actualizar_np_ligas(np_por_liga)
 
+    # Actualizar DATOS HORARIOS
     print("⏱ Actualizando DATOS HORARIOS...")
     actualizar_datos_horarios(np_total=sum(np_por_liga.values()))
 
