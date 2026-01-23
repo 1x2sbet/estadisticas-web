@@ -99,13 +99,13 @@ elif seccion == "⚙️ Preferencias":
         ruta_csv = "data/data/ligas.csv"
 
         if not os.path.exists(ruta_csv):
-            st.error("❌ No se encontró el archivo data/ligas.csv")
+            st.error("❌ No se encontró el archivo data/data/ligas.csv")
             st.stop()
 
         df = pd.read_csv(ruta_csv)
 
-        st.subheader("📄 Base de datos")
-        st.dataframe(df)
+        # NORMALIZAR NOMBRES DE COLUMNAS
+        df.columns = df.columns.str.strip().str.lower()
 
         # Filtro por continente
         continentes = sorted(df["continente"].unique())
@@ -138,12 +138,15 @@ elif seccion == "⚙️ Preferencias":
 
 # ========= ANÁLISIS =========
 elif seccion == "📊 Análisis":
+    st.title("📊 Análisis")
     st.info("Módulo en construcción.")
 
 # ========= HERRAMIENTAS =========
 elif seccion == "🧮 Herramientas":
+    st.title("🧮 Herramientas")
     st.info("Herramientas en construcción.")
 
 # ========= GESTIÓN =========
 elif seccion == "💼 Gestión":
+    st.title("💼 Gestión")
     st.info("Gestión en construcción.")
