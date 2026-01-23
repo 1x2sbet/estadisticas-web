@@ -106,6 +106,8 @@ elif seccion == "⚙️ Preferencias":
 
         # NORMALIZAR NOMBRES DE COLUMNAS
         df.columns = df.columns.str.strip().str.lower()
+        st.subheader("📄 Base de datos de ligas")
+        st.dataframe(df, use_container_width=True)
 
         # Filtro por continente
         continentes = sorted(df["continente"].unique())
