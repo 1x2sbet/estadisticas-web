@@ -1,5 +1,6 @@
 import streamlit as st
 import pandas as pd
+import os
 
 # ---------------------------------
 # CONFIGURACIÓN GENERAL
@@ -23,8 +24,7 @@ seccion = st.sidebar.radio(
         "📊 Análisis",
         "🧮 Herramientas",
         "💼 Gestión"
-    ],
-    key="menu_principal"
+    ]
 )
 
 # ---------------------------------
@@ -46,8 +46,7 @@ elif seccion == "⚙️ Preferencias":
 
     submenu = st.selectbox(
         "Preferencias",
-        ["Casas de Apuestas", "Ligas"],
-        key="submenu_preferencias"
+        ["Casas de Apuestas", "Ligas"]
     )
 
     # ----- CASAS DE APUESTAS -----
@@ -89,7 +88,6 @@ elif seccion == "⚙️ Preferencias":
                     key=f"check_{casa}"
                 )
 
-        st.divider()
         st.success("Preferencias guardadas correctamente.")
 
     # ----- LIGAS -----
@@ -98,15 +96,24 @@ elif seccion == "⚙️ Preferencias":
         st.title("🏆 Ligas a Analizar")
         st.write("Selecciona continentes, países y ligas desde la base de datos.")
 
-        df = pd.read_csv("data/ligas.csv")
+        ruta_csv = "data/ligas.csv"
 
-        # Continente
+        if not os.path.exists(ruta_csv):
+            st.error("❌ No se encontró el archivo data/ligas.csv")
+            st.stop()
+
+        df = pd.read_csv(ruta_csv)
+
+        st.subheader("📄 Base de datos")
+        st.dataframe(df)
+
+        # Filtro por continente
         continentes = sorted(df["continente"].unique())
         continente_sel = st.selectbox("🌍 Continente", continentes)
 
         df_cont = df[df["continente"] == continente_sel]
 
-        # País
+        # Filtro por país
         paises = sorted(df_cont["pais"].unique())
         pais_sel = st.selectbox("🏳️ País", paises)
 
@@ -119,28 +126,24 @@ elif seccion == "⚙️ Preferencias":
 
         for _, row in df_pais.iterrows():
             liga = row["liga"]
-            valor_inicial = bool(row["activa"])
+            activa = bool(row["activa"])
 
             st.session_state.ligas_activas[liga] = st.checkbox(
                 liga,
-                value=st.session_state.ligas_activas.get(liga, valor_inicial),
+                value=st.session_state.ligas_activas.get(liga, activa),
                 key=f"liga_{liga}"
             )
 
-        st.divider()
-        st.success("Selección de ligas cargada desde la base de datos.")
+        st.success("Selección de ligas cargada correctamente.")
 
 # ========= ANÁLISIS =========
 elif seccion == "📊 Análisis":
-    st.title("📊 Análisis")
     st.info("Módulo en construcción.")
 
 # ========= HERRAMIENTAS =========
 elif seccion == "🧮 Herramientas":
-    st.title("🧮 Herramientas")
-    st.info("Módulo en construcción.")
+    st.info("Herramientas en construcción.")
 
 # ========= GESTIÓN =========
 elif seccion == "💼 Gestión":
-    st.title("💼 Gestión")
-    st.info("Módulo en construcción.")
+    st.info("Gestión en construcción.")
