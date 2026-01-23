@@ -12,7 +12,7 @@ st.set_page_config(
 )
 
 # ---------------------------------
-# MENÚ LATERAL PRINCIPAL
+# MENÚ LATERAL
 # ---------------------------------
 st.sidebar.title("⚽ 1X2sBet")
 
@@ -29,24 +29,20 @@ seccion = st.sidebar.radio(
 )
 
 # ---------------------------------
-# CONTENIDO PRINCIPAL
+# CONTENIDO
 # ---------------------------------
 
 # ========= INICIO =========
 if seccion == "🏠 Inicio":
     st.title("📊 Plataforma de Análisis Estadístico")
     st.write(
-        """
-        Bienvenido a **1X2sBet**.  
-        Esta plataforma muestra análisis estadísticos generados automáticamente con Python.
-        """
+        "Bienvenido a **1X2sBet**. Plataforma de análisis estadístico deportivo."
     )
 
 # ========= CASAS DE APUESTAS =========
 elif seccion == "🏦 Casas de Apuestas":
 
     st.title("🏦 Casas de Apuestas Legales en Colombia")
-    st.write("Activa o desactiva las casas que deseas usar en los análisis.")
 
     casas = {
         "BETANO": "assets/logos/betano.png",
@@ -66,28 +62,24 @@ elif seccion == "🏦 Casas de Apuestas":
     }
 
     if "casas_activas" not in st.session_state:
-        st.session_state.casas_activas = {casa: True for casa in casas}
+        st.session_state.casas_activas = {c: True for c in casas}
 
-    for casa, logo_path in casas.items():
+    for casa, logo in casas.items():
         col1, col2 = st.columns([1, 6])
-
         with col1:
-            st.image(logo_path, width=35)
-
+            st.image(logo, width=35)
         with col2:
             st.session_state.casas_activas[casa] = st.checkbox(
                 casa,
                 value=st.session_state.casas_activas[casa],
-                key=f"check_{casa}"
+                key=f"casa_{casa}"
             )
 
-    st.success("Casas de apuestas configuradas correctamente.")
-
-# ========= LIGAS =========
+# ========= LIGAS DESPLEGABLES =========
 elif seccion == "🏆 Ligas":
 
     st.title("🏆 Ligas a Analizar")
-    st.write("Selecciona continentes, países y ligas desde la base de datos.")
+    st.write("Despliega por continente y país para activar ligas.")
 
     ruta_csv = "data/data/ligas.csv"
 
@@ -97,39 +89,34 @@ elif seccion == "🏆 Ligas":
 
     df = pd.read_csv(ruta_csv)
 
-    # Normalizar nombres de columnas
+    # Normalizar columnas
     df.columns = df.columns.str.strip().str.lower()
-
-    # Mostrar tabla (temporal)
-    st.subheader("📄 Base de datos de ligas")
-    st.dataframe(df, use_container_width=True)
-
-    # Filtro por continente
-    continentes = sorted(df["continente"].unique())
-    continente_sel = st.selectbox("🌍 Continente", continentes)
-
-    df_cont = df[df["continente"] == continente_sel]
-
-    # Filtro por país
-    paises = sorted(df_cont["pais"].unique())
-    pais_sel = st.selectbox("🏳️ País", paises)
-
-    df_pais = df_cont[df_cont["pais"] == pais_sel]
-
-    st.subheader("⚽ Ligas")
 
     if "ligas_activas" not in st.session_state:
         st.session_state.ligas_activas = {}
 
-    for _, row in df_pais.iterrows():
-        liga = row["liga"]
-        activa = bool(row["activa"])
+    # CONTINENTES
+    for continente in sorted(df["continente"].unique()):
+        with st.expander(f"🌍 {continente}", expanded=False):
 
-        st.session_state.ligas_activas[liga] = st.checkbox(
-            liga,
-            value=st.session_state.ligas_activas.get(liga, activa),
-            key=f"liga_{liga}"
-        )
+            df_cont = df[df["continente"] == continente]
+
+            # PAÍSES
+            for pais in sorted(df_cont["pais"].unique()):
+                with st.expander(f"🏳️ {pais}", expanded=False):
+
+                    df_pais = df_cont[df_cont["pais"] == pais]
+
+                    # LIGAS
+                    for _, row in df_pais.iterrows():
+                        liga = row["liga"]
+                        activa = bool(row["activa"])
+
+                        st.session_state.ligas_activas[liga] = st.checkbox(
+                            liga,
+                            value=st.session_state.ligas_activas.get(liga, activa),
+                            key=f"liga_{continente}_{pais}_{liga}"
+                        )
 
     st.success("Ligas cargadas correctamente.")
 
@@ -146,4 +133,4 @@ elif seccion == "🧮 Herramientas":
 # ========= GESTIÓN =========
 elif seccion == "💼 Gestión":
     st.title("💼 Gestión")
-    st.info("Gestión en construcción.")
+    st.info("Módulo en construcción.")
