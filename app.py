@@ -45,7 +45,7 @@ if menu == "🏠 Inicio":
         """
         Bienvenido a **1X2sBet**.  
         Plataforma de análisis estadístico deportivo basada en datos
-        automáticos procesados con Python.
+        generados automáticamente con Python.
         """
     )
 
@@ -101,40 +101,44 @@ elif menu == "🏆 Ligas":
 
     try:
         df = pd.read_csv(LIGAS_CSV_URL)
-    except Exception as e:
+    except Exception:
         st.error("❌ No se pudo cargar la base de datos desde Google Sheets")
         st.stop()
 
-    # Normalizar columnas
-    df.columns = df.columns.str.lower()
+    # ---- NORMALIZAR COLUMNAS ----
+    df.columns = (
+        df.columns
+        .str.upper()
+        .str.strip()
+    )
 
-    columnas_requeridas = {"continente", "pais", "liga", "activa"}
+    columnas_requeridas = {"CONTINENTE", "PAIS", "LIGA", "ENCENDIDO"}
     if not columnas_requeridas.issubset(df.columns):
-        st.error("❌ La hoja debe tener: continente, pais, liga, activa")
+        st.error("❌ La hoja debe tener: CONTINENTE, PAIS, LIGA, ENCENDIDO")
         st.stop()
 
     if "ligas_activas" not in st.session_state:
         st.session_state.ligas_activas = {}
 
-    # -------- ESTRUCTURA DESPLEGABLE --------
-    for continente in sorted(df["continente"].dropna().unique()):
+    # ---- ESTRUCTURA DESPLEGABLE ----
+    for continente in sorted(df["CONTINENTE"].dropna().unique()):
 
         with st.expander(f"🌍 {continente}", expanded=False):
 
-            df_cont = df[df["continente"] == continente]
+            df_cont = df[df["CONTINENTE"] == continente]
 
-            for pais in sorted(df_cont["pais"].dropna().unique()):
+            for pais in sorted(df_cont["PAIS"].dropna().unique()):
                 st.markdown(f"### 🏳️ {pais}")
 
-                df_pais = df_cont[df_cont["pais"] == pais]
+                df_pais = df_cont[df_cont["PAIS"] == pais]
 
                 for _, row in df_pais.iterrows():
-                    liga = row["liga"]
-                    activa = bool(row["activa"])
+                    liga = row["LIGA"]
+                    encendido = str(row["ENCENDIDO"]).strip().upper() == "TRUE"
 
                     st.session_state.ligas_activas[liga] = st.checkbox(
                         liga,
-                        value=st.session_state.ligas_activas.get(liga, activa),
+                        value=st.session_state.ligas_activas.get(liga, encendido),
                         key=f"liga_{liga}"
                     )
 
