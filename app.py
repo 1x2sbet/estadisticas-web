@@ -1,4 +1,5 @@
 import streamlit as st
+import pandas as pd
 
 # ---------------------------------
 # CONFIGURACIÓN GENERAL
@@ -92,95 +93,54 @@ elif seccion == "⚙️ Preferencias":
         st.success("Preferencias guardadas correctamente.")
 
     # ----- LIGAS -----
-    import pandas as pd
+    elif submenu == "Ligas":
 
-elif submenu == "Ligas":
+        st.title("🏆 Ligas a Analizar")
+        st.write("Selecciona continentes, países y ligas desde la base de datos.")
 
-    st.title("🏆 Ligas a Analizar")
-    st.write("Selecciona continentes, países y ligas desde la base de datos.")
+        df = pd.read_csv("data/ligas.csv")
 
-    df = pd.read_csv("data/ligas.csv")
+        # Continente
+        continentes = sorted(df["continente"].unique())
+        continente_sel = st.selectbox("🌍 Continente", continentes)
 
-    # Filtro por continente
-    continentes = sorted(df["continente"].unique())
-    continente_sel = st.selectbox(
-        "🌍 Continente",
-        continentes,
-        key="filtro_continente"
-    )
+        df_cont = df[df["continente"] == continente_sel]
 
-    df_cont = df[df["continente"] == continente_sel]
+        # País
+        paises = sorted(df_cont["pais"].unique())
+        pais_sel = st.selectbox("🏳️ País", paises)
 
-    # Filtro por país
-    paises = sorted(df_cont["pais"].unique())
-    pais_sel = st.selectbox(
-        "🏳️ País",
-        paises,
-        key="filtro_pais"
-    )
+        df_pais = df_cont[df_cont["pais"] == pais_sel]
 
-    df_pais = df_cont[df_cont["pais"] == pais_sel]
+        st.subheader("⚽ Ligas")
 
-    st.subheader("⚽ Ligas")
+        if "ligas_activas" not in st.session_state:
+            st.session_state.ligas_activas = {}
 
-    if "ligas_activas" not in st.session_state:
-        st.session_state.ligas_activas = {}
+        for _, row in df_pais.iterrows():
+            liga = row["liga"]
+            valor_inicial = bool(row["activa"])
 
-    for _, row in df_pais.iterrows():
-        liga = row["liga"]
-        valor_inicial = bool(row["activa"])
+            st.session_state.ligas_activas[liga] = st.checkbox(
+                liga,
+                value=st.session_state.ligas_activas.get(liga, valor_inicial),
+                key=f"liga_{liga}"
+            )
 
-        st.session_state.ligas_activas[liga] = st.checkbox(
-            liga,
-            value=st.session_state.ligas_activas.get(liga, valor_inicial),
-            key=f"liga_{liga}"
-        )
-
-    st.divider()
-    st.success("Selección de ligas cargada desde la base de datos.")
-
+        st.divider()
+        st.success("Selección de ligas cargada desde la base de datos.")
 
 # ========= ANÁLISIS =========
 elif seccion == "📊 Análisis":
-
-    submenu = st.selectbox(
-        "Tipo de análisis",
-        [
-            "Análisis Ordenado",
-            "Surebet",
-            "Doble Oportunidad",
-            "Apuestas de Valor"
-        ],
-        key="submenu_analisis"
-    )
-
-    st.title(f"📊 {submenu}")
+    st.title("📊 Análisis")
     st.info("Módulo en construcción.")
 
 # ========= HERRAMIENTAS =========
 elif seccion == "🧮 Herramientas":
-
-    submenu = st.selectbox(
-        "Herramientas",
-        ["Calculadora", "Convertidor de Bonos"],
-        key="submenu_herramientas"
-    )
-
-    st.title(f"🧮 {submenu}")
-    st.info("Herramienta en construcción.")
+    st.title("🧮 Herramientas")
+    st.info("Módulo en construcción.")
 
 # ========= GESTIÓN =========
 elif seccion == "💼 Gestión":
-
-    submenu = st.selectbox(
-        "Gestión",
-        [
-            "Control de Apuestas",
-            "Historial de Transacciones",
-            "Informe Anual"
-        ],
-        key="submenu_gestion"
-    )
-
-    st.title(f"💼 {submenu}")
-    st.info("Sección en construcción.")
+    st.title("💼 Gestión")
+    st.info("Módulo en construcción.")
