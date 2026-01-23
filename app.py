@@ -1,7 +1,17 @@
 import streamlit as st
-# -------------------------------
-# MENÚ LATERAL
-# -------------------------------
+
+# ---------------------------------
+# CONFIGURACIÓN GENERAL
+# ---------------------------------
+st.set_page_config(
+    page_title="1X2sBet",
+    page_icon="⚽",
+    layout="wide"
+)
+
+# ---------------------------------
+# MENÚ LATERAL PRINCIPAL
+# ---------------------------------
 st.sidebar.title("⚽ 1X2sBet")
 
 seccion = st.sidebar.radio(
@@ -12,28 +22,36 @@ seccion = st.sidebar.radio(
         "📊 Análisis",
         "🧮 Herramientas",
         "💼 Gestión"
-    ]
+    ],
+    key="menu_principal"
 )
 
-# -------------------------------
-# CONTENIDO PRINCIPAL
-# -------------------------------
+# ---------------------------------
+# CONTENIDO
+# ---------------------------------
 
+# ========= INICIO =========
 if seccion == "🏠 Inicio":
-    st.title("⚽ 1X2sBet")
-    st.write("Plataforma de Análisis de apuestas de futból. Está diseñado sólo para las casas de puestas legales en Colombia.")
+    st.title("📊 Plataforma de Análisis Estadístico")
+    st.write(
+        """
+        Bienvenido a **1X2sBet**.  
+        Esta plataforma muestra análisis estadísticos generados automáticamente con Python.
+        """
+    )
 
-# -------- PREFERENCIAS --------
+# ========= PREFERENCIAS =========
 elif seccion == "⚙️ Preferencias":
     submenu = st.selectbox(
         "Preferencias",
-        ["Casas de Apuestas", "Ligas"]
+        ["Casas de Apuestas", "Ligas"],
+        key="submenu_preferencias"
     )
 
-    # ---------------- CASAS DE APUESTAS ----------------
+    # ----- CASAS DE APUESTAS -----
     if submenu == "Casas de Apuestas":
         st.title("🏦 Casas de Apuestas Legales en Colombia")
-        st.write("Activa o desactiva las casas de apuestas que deseas usar en los análisis.")
+        st.write("Activa o desactiva las casas que deseas usar en los análisis.")
 
         casas = {
             "BETANO": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Betano_logo.png",
@@ -53,7 +71,7 @@ elif seccion == "⚙️ Preferencias":
         }
 
         if "casas_activas" not in st.session_state:
-            st.session_state.casas_activas = {}
+            st.session_state.casas_activas = {casa: True for casa in casas}
 
         for casa, logo in casas.items():
             col1, col2 = st.columns([1, 6])
@@ -62,35 +80,21 @@ elif seccion == "⚙️ Preferencias":
                 st.image(logo, width=30)
 
             with col2:
-                activo = st.checkbox(
+                st.session_state.casas_activas[casa] = st.checkbox(
                     casa,
-                    value=st.session_state.casas_activas.get(casa, True),
-                    key=casa
+                    value=st.session_state.casas_activas[casa],
+                    key=f"check_{casa}"
                 )
-                st.session_state.casas_activas[casa] = activo
 
         st.divider()
         st.success("Preferencias guardadas para esta sesión.")
 
-    # ---------------- LIGAS ----------------
+    # ----- LIGAS -----
     elif submenu == "Ligas":
         st.title("🏆 Ligas")
-        st.info("Configuración de ligas (lo haremos después).")
+        st.info("Este módulo se construirá después.")
 
-    submenu = st.selectbox(
-        "Preferencias",
-        ["Casas de Apuestas", "Ligas"]
-    )
-
-    if submenu == "Casas de Apuestas":
-        st.title("🏦 Casas de Apuestas")
-        st.info("Configuración y selección de casas de apuestas.")
-
-    elif submenu == "Ligas":
-        st.title("🏆 Ligas")
-        st.info("Selección de ligas a analizar.")
-
-# -------- ANÁLISIS --------
+# ========= ANÁLISIS =========
 elif seccion == "📊 Análisis":
     submenu = st.selectbox(
         "Tipo de análisis",
@@ -99,23 +103,25 @@ elif seccion == "📊 Análisis":
             "Surebet",
             "Doble Oportunidad",
             "Apuestas de Valor"
-        ]
+        ],
+        key="submenu_analisis"
     )
 
     st.title(f"📊 {submenu}")
-    st.info(f"Módulo de {submenu.lower()} (en construcción).")
+    st.info("Módulo en construcción.")
 
-# -------- HERRAMIENTAS --------
+# ========= HERRAMIENTAS =========
 elif seccion == "🧮 Herramientas":
     submenu = st.selectbox(
         "Herramientas",
-        ["Calculadora", "Convertidor de Bonos"]
+        ["Calculadora", "Convertidor de Bonos"],
+        key="submenu_herramientas"
     )
 
     st.title(f"🧮 {submenu}")
-    st.info(f"Herramienta: {submenu.lower()}.")
+    st.info("Herramienta en construcción.")
 
-# -------- GESTIÓN --------
+# ========= GESTIÓN =========
 elif seccion == "💼 Gestión":
     submenu = st.selectbox(
         "Gestión",
@@ -123,9 +129,9 @@ elif seccion == "💼 Gestión":
             "Control de Apuestas",
             "Historial de Transacciones",
             "Informe Anual"
-        ]
+        ],
+        key="submenu_gestion"
     )
 
     st.title(f"💼 {submenu}")
-    st.info(f"Sección de {submenu.lower()}.")
-
+    st.info("Sección en construcción.")
