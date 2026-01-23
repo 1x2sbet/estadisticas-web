@@ -20,7 +20,7 @@ URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUK
 
 HOJA_ULTIMO = "BETPLAYULTIMO"
 HOJA_PREVIO = "BETPLAYPREVIO"
-HOJA_NP = "LIGAS"
+HOJA_NP = "LIGA"
 HOJA_FECHAS = "FECHAS"
 
 # ==============================
