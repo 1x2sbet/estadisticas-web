@@ -92,9 +92,53 @@ elif seccion == "⚙️ Preferencias":
         st.success("Preferencias guardadas correctamente.")
 
     # ----- LIGAS -----
-    elif submenu == "Ligas":
-        st.title("🏆 Ligas")
-        st.info("Este módulo se construirá después.")
+    import pandas as pd
+
+elif submenu == "Ligas":
+
+    st.title("🏆 Ligas a Analizar")
+    st.write("Selecciona continentes, países y ligas desde la base de datos.")
+
+    df = pd.read_csv("data/ligas.csv")
+
+    # Filtro por continente
+    continentes = sorted(df["continente"].unique())
+    continente_sel = st.selectbox(
+        "🌍 Continente",
+        continentes,
+        key="filtro_continente"
+    )
+
+    df_cont = df[df["continente"] == continente_sel]
+
+    # Filtro por país
+    paises = sorted(df_cont["pais"].unique())
+    pais_sel = st.selectbox(
+        "🏳️ País",
+        paises,
+        key="filtro_pais"
+    )
+
+    df_pais = df_cont[df_cont["pais"] == pais_sel]
+
+    st.subheader("⚽ Ligas")
+
+    if "ligas_activas" not in st.session_state:
+        st.session_state.ligas_activas = {}
+
+    for _, row in df_pais.iterrows():
+        liga = row["liga"]
+        valor_inicial = bool(row["activa"])
+
+        st.session_state.ligas_activas[liga] = st.checkbox(
+            liga,
+            value=st.session_state.ligas_activas.get(liga, valor_inicial),
+            key=f"liga_{liga}"
+        )
+
+    st.divider()
+    st.success("Selección de ligas cargada desde la base de datos.")
+
 
 # ========= ANÁLISIS =========
 elif seccion == "📊 Análisis":
