@@ -96,7 +96,7 @@ elif seccion == "⚙️ Preferencias":
         st.title("🏆 Ligas a Analizar")
         st.write("Selecciona continentes, países y ligas desde la base de datos.")
 
-        ruta_csv = "data/ligas.csv"
+        ruta_csv = "data/data/ligas.csv"
 
         if not os.path.exists(ruta_csv):
             st.error("❌ No se encontró el archivo data/ligas.csv")
