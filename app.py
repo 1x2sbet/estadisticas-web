@@ -21,7 +21,7 @@ seccion = st.sidebar.radio(
 
 if seccion == "🏠 Inicio":
     st.title("⚽ 1X2sBet")
-    st.write("Plataforma de análisis estadístico y gestión de apuestas.")
+    st.write("Plataforma de Análisis de apuestas de futból. Está diseñado sólo para las casas de puestas legales en Colombia.")
 
 # -------- PREFERENCIAS --------
 elif seccion == "⚙️ Preferencias":
