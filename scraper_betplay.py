@@ -1,221 +1,169 @@
-from playwright.sync_api import sync_playwright
-import pandas as pd
+# scraper_betplay.py
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime, timedelta
 import time
-import os
 import re
-from openpyxl import load_workbook
+from playwright.sync_api import sync_playwright
 
 # -----------------------
-# CONFIGURACIÓN
+# CONFIGURACIÓN GOOGLE SHEETS
 # -----------------------
-EXCEL_LINKS = r"C:\Users\luisf\OneDrive\Escritorio\INFO LUIS\JUEGOS\DATOS PYTHON\DATOS EXTRAIDOS PYTHON.xlsx"
-HOJA_LINKS = "LISTADOLINKS"
-OUTPUT_FILE = r"C:\Users\luisf\OneDrive\Escritorio\INFO LUIS\JUEGOS\DATOS PYTHON\DATOS EXTRAIDOS PYTHON.xlsx"
+SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
+creds_json = """${{ secrets.GOOGLE_CREDS }}"""  # Secreto GitHub
+creds = ServiceAccountCredentials.from_json_keyfile_dict(eval(creds_json), SCOPE)
+gc = gspread.authorize(creds)
 
-# -----------------------
-# LEER LINKS DESDE EXCEL
-# -----------------------
-def leer_links_desde_excel():
-    try:
-        df = pd.read_excel(EXCEL_LINKS, sheet_name=HOJA_LINKS)
-        df.columns = [c.strip().upper() for c in df.columns]
+# LIBROS
+LIGAS_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pubhtml"
+BETPLAY_SHEET_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiLCx619Apna4bw3dlY-vcN4rzrhV5JOwb5tXujOcjZIP_F050Z4aJ3IytSCpU6GNqfeA6ymYGjATM/pubhtml"
+DATOS_HORARIOS_URL = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjU9YAn48_nYN7_eQxOIg7jz3jFxySgIgqdum0nFiu4CH88mCJpxIx-H1pfEIsZ7qGhHl57hxj1qwV/pubhtml"
 
-        if "NP BETPLAY" not in df.columns:
-            df["NP BETPLAY"] = ""
-
-        if not {"ENCENDIDO", "LIGA", "BETPLAY"}.issubset(df.columns):
-            print("❌ El archivo debe tener las columnas: 'ENCENDIDO', 'LIGA' y 'BETPLAY'.")
-            return df, []
-
-        df_activas = df[df["ENCENDIDO"].astype(str).str.upper().str.strip() == "ACTIVO"]
-        df_activas = df_activas[df_activas["BETPLAY"].astype(str).str.startswith("http")]
-
-        urls = list(zip(df_activas["LIGA"], df_activas["BETPLAY"]))
-        print(f"📚 {len(urls)} ligas activas para procesar.")
-        return df, urls
-
-    except Exception as e:
-        print(f"❌ Error leyendo Excel: {e}")
-        return pd.DataFrame(), []
+# NOMBRES HOJAS
+HOJA_LIGAS = "LIGA"
+HOJA_BETPLAY = "BETPLAYULTIMO"
+HOJA_BETPLAY_PREVIO = "BETPLAYPREVIO"
+HOJA_FECHAS = "FECHAS"
 
 # -----------------------
-# EXTRAER PARTIDOS
+# FUNCIONES AUXILIARES
 # -----------------------
-def extraer_partidos(page, liga, url, recargar=False):
-    try:
-        page.goto(url, timeout=60000)
-        page.wait_for_timeout(9000)
+def parse_fecha(texto_fecha):
+    """Convierte 'hoy', 'mañana', 'lunes' a fecha dd/mm/yyyy"""
+    texto_fecha = texto_fecha.lower()
+    hoy = datetime.today()
+    if "hoy" in texto_fecha:
+        return hoy.strftime("%d/%m/%Y")
+    elif "mañana" in texto_fecha:
+        fecha = hoy + timedelta(days=1)
+        return fecha.strftime("%d/%m/%Y")
+    else:
+        # intenta extraer dd/mm/yyyy de texto
+        m = re.search(r"(\d{1,2})/(\d{1,2})/(\d{4})", texto_fecha)
+        if m:
+            return f"{int(m.group(1)):02d}/{int(m.group(2)):02d}/{m.group(3)}"
+        else:
+            return ""  # si no se reconoce
 
-        tiene_section = page.query_selector("main.KambiBC-sports-hub section")
-        if not tiene_section:
-            print(f"⚠️ Liga sin partidos: {liga}")
-            return 0, []
+def parse_hora(texto_hora):
+    """Convierte hora a formato 24h hh:mm"""
+    texto_hora = texto_hora.strip()
+    # ejemplo simple, puede mejorarse según necesidad
+    m = re.match(r"(\d{1,2}):(\d{2})", texto_hora)
+    if m:
+        return f"{int(m.group(1)):02d}:{int(m.group(2)):02d}"
+    else:
+        return ""
 
-        cuerpo_texto = page.inner_text("body") if page.query_selector("body") else ""
-        if "Posición final" in cuerpo_texto:
-            try:
-                fecha_span = page.query_selector("span.KambiBC-event-item__start-time--date")
-                if fecha_span:
-                    fecha_texto = fecha_span.inner_text().strip()
-                    print(f"⚠️ Liga sin iniciar: {liga} inicia el {fecha_texto}")
-                else:
-                    html = page.content()
-                    m = re.search(r"([0-9]{1,2}\s+de\s+[a-záéíóúñ]+(?:\s+[a-z]+)?\s+de\s+[0-9]{4})", html, flags=re.IGNORECASE)
-                    if m:
-                        fecha_texto = m.group(1)
-                        print(f"⚠️ Liga sin iniciar: {liga} inicia el {fecha_texto}")
-                    else:
-                        print(f"⚠️ Liga sin iniciar: {liga} (fecha no detectada)")
-            except:
-                print(f"⚠️ Liga sin iniciar: {liga} (fecha no detectada)")
-            return "NO INICIADO", []
+# -----------------------
+# LEER LIGAS ACTIVAS
+# -----------------------
+sh_ligas = gc.open_by_url(LIGAS_SHEET_URL)
+worksheet_ligas = sh_ligas.worksheet(HOJA_LIGAS)
+all_ligas = worksheet_ligas.get_all_records()  # lista de dicts
+ligas_activas = [(row["PAIS"], row["LIGA"], row["BETPLAY"]) for row in all_ligas if row["ENCENDIDO"]]
 
-        partidos = []
-        items = page.query_selector_all("li.KambiBC-sandwich-filter__event-list-item")
+print(f"📚 {len(ligas_activas)} ligas activas encontradas.")
 
-        for p in items:
-            try:
-                equipos = p.query_selector_all("div.KambiBC-event-participants__name-participant-name")
-                local = equipos[0].inner_text().strip() if len(equipos) > 0 else ""
-                visitante = equipos[1].inner_text().strip() if len(equipos) > 1 else ""
+# -----------------------
+# MOVER DATOS ANTERIORES BETPLAY A BETPLAYPREVIO
+# -----------------------
+sh_betplay = gc.open_by_url(BETPLAY_SHEET_URL)
+ws_ultimo = sh_betplay.worksheet(HOJA_BETPLAY)
+ws_previo = sh_betplay.worksheet(HOJA_BETPLAY_PREVIO)
 
-                fecha_span = p.query_selector("span.KambiBC-event-item__start-time--date")
-                hora_span = p.query_selector("span.KambiBC-event-item__start-time--time")
-                fecha = fecha_span.inner_text().strip() if fecha_span else ""
-                hora = hora_span.inner_text().strip() if hora_span else ""
-                fecha_hora = f"{fecha}, {hora}" if fecha or hora else ""
+# copiar todo de BETPLAYULTIMO a BETPLAYPREVIO
+ws_previo.clear()
+ws_previo.update(ws_ultimo.get_all_values())
 
-                cuotas = p.query_selector_all("div.KambiBC-bet-offer--onecrosstwo button.KambiBC-betty-outcome")
-                c1 = cuotas[0].inner_text().strip() if len(cuotas) > 0 else ""
-                cx = cuotas[1].inner_text().strip() if len(cuotas) > 1 else ""
-                c2 = cuotas[2].inner_text().strip() if len(cuotas) > 2 else ""
+# limpiar BETPLAYULTIMO para llenarlo con nuevos datos
+ws_ultimo.clear()
+ws_ultimo.append_row(["PAIS","LIGA","DIA","HORA","LOCAL","VISITANTE","L","X","V","LIMITE GOL","C MAS","C MENOS"])
 
-                partidos.append({
-                    "Liga": liga,
-                    "Fecha": fecha_hora,
-                    "Local": local,
-                    "Visitante": visitante,
-                    "Cuota Local": c1,
-                    "Cuota Empate": cx,
-                    "Cuota Visitante": c2
-                })
-            except:
+# -----------------------
+# EXTRAER DATOS CON PLAYWRIGHT
+# -----------------------
+total_partidos = 0
+partidos_data = []
+
+with sync_playwright() as p:
+    browser = p.chromium.launch(headless=True)
+    for pais, liga, url in ligas_activas:
+        page = browser.new_page()
+        try:
+            page.goto(url, timeout=60000)
+            page.wait_for_timeout(5000)
+
+            items = page.query_selector_all("li.KambiBC-sandwich-filter__event-list-item")
+            if not items:
+                print(f"⚠️ No hay partidos en {liga}")
+                page.close()
                 continue
 
-        if not partidos and not recargar:
-            print(f"🔄 Sin datos en {liga}, recargando página y esperando 20s...")
-            page.reload()
-            page.wait_for_timeout(20000)
-            return extraer_partidos(page, liga, url, recargar=True)
+            for item in items:
+                equipos = item.query_selector_all("div.KambiBC-event-participants__name-participant-name")
+                local = equipos[0].inner_text().strip() if len(equipos)>0 else ""
+                visitante = equipos[1].inner_text().strip() if len(equipos)>1 else ""
 
-        if partidos:
-            print(f"✅ {len(partidos)} partidos extraídos de {liga}")
-            return len(partidos), partidos
-        else:
-            print(f"⚠️ No se encontraron partidos en {liga} tras recarga")
-            return 0, []
+                fecha_span = item.query_selector("span.KambiBC-event-item__start-time--date")
+                hora_span = item.query_selector("span.KambiBC-event-item__start-time--time")
+                dia = parse_fecha(fecha_span.inner_text().strip() if fecha_span else "")
+                hora = parse_hora(hora_span.inner_text().strip() if hora_span else "")
 
-    except Exception as e:
-        print(f"❌ Error en {liga}: {e}")
-        return 0, []
+                cuotas = item.query_selector_all("div.KambiBC-bet-offer--onecrosstwo button.KambiBC-betty-outcome")
+                c1 = cuotas[0].inner_text().strip() if len(cuotas)>0 else ""
+                cx = cuotas[1].inner_text().strip() if len(cuotas)>1 else ""
+                c2 = cuotas[2].inner_text().strip() if len(cuotas)>2 else ""
+                lim_gol = cuotas[3].inner_text().strip() if len(cuotas)>3 else ""
+                c_mas = cuotas[4].inner_text().strip() if len(cuotas)>4 else ""
+                c_menos = cuotas[5].inner_text().strip() if len(cuotas)>5 else ""
+
+                row = [pais, liga, dia, hora, local, visitante, c1, cx, c2, lim_gol, c_mas, c_menos]
+                partidos_data.append(row)
+                total_partidos += 1
+
+            page.close()
+            print(f"✅ {len(items)} partidos extraídos de {liga}")
+
+        except Exception as e:
+            print(f"❌ Error en {liga}: {e}")
+            page.close()
+            continue
+
+    browser.close()
 
 # -----------------------
-# PROGRAMA PRINCIPAL
+# GUARDAR DATOS NUEVOS EN BETPLAYULTIMO
 # -----------------------
-start_time = time.time()
-df_links, urls = leer_links_desde_excel()
-total_partidos_extraidos = 0
-np_por_liga = {}
-
-if not urls:
-    print("⚠️ No hay ligas activas para procesar.")
+if partidos_data:
+    for row in partidos_data:
+        ws_ultimo.append_row(row)
+    print(f"📊 {total_partidos} partidos guardados en BETPLAYULTIMO.")
 else:
-    with sync_playwright() as p:
-        browser = p.chromium.launch_persistent_context(
-            user_data_dir=r"C:\BetplayProfile",
-            headless=False,
-            args=["--start-maximized"]
-        )
-        all_results = []
+    print("⚠️ No se extrajo ningún partido.")
 
-        for liga, url in urls:
-            page = browser.new_page()
-            cantidad, resultados = extraer_partidos(page, liga, url)
-            all_results.extend(resultados)
-            np_por_liga[liga] = cantidad
-            if isinstance(cantidad, int):
-                total_partidos_extraidos += cantidad
-            try:
-                page.close()
-            except:
-                pass
-            time.sleep(2)
+# -----------------------
+# ACTUALIZAR NP BETPLAY EN LIGAS
+# -----------------------
+for idx, row in enumerate(all_ligas, start=2):
+    liga = row["LIGA"]
+    np_val = sum(1 for r in partidos_data if r[1] == liga)
+    ws_ligas.update_cell(idx, 4, np_val)  # columna 4 = NP BETPLAY
 
-        try:
-            browser.close()
-        except:
-            pass
+# -----------------------
+# ACTUALIZAR HOJA FECHAS
+# -----------------------
+sh_horarios = gc.open_by_url(DATOS_HORARIOS_URL)
+ws_fechas = sh_horarios.worksheet(HOJA_FECHAS)
 
-    df = pd.DataFrame(all_results)
-    if not df.empty:
-        if os.path.exists(OUTPUT_FILE):
-            with pd.ExcelWriter(OUTPUT_FILE, engine="openpyxl", mode="a", if_sheet_exists="replace") as writer:
-                df.to_excel(writer, sheet_name="BETPLAY", index=False)
-        else:
-            with pd.ExcelWriter(OUTPUT_FILE, engine="openpyxl") as writer:
-                df.to_excel(writer, sheet_name="BETPLAY", index=False)
+# mover ultima a previa
+ultima_fila = ws_fechas.row_values(2)
+if ultima_fila:
+    ws_fechas.update("B2", ultima_fila[3])  # NP PREVIA
+    ws_fechas.update("A2", ultima_fila[2])  # FECHA PREVIA
 
-        print(f"📊 Datos actualizados en la hoja 'BETPLAY' del archivo:\n   {OUTPUT_FILE}")
-    else:
-        print("⚠️ No se extrajo ningún partido.")
+# actualizar ultima ejecución
+ws_fechas.update("C2", datetime.now().strftime("%d/%m/%Y %H:%M"))  # FECHA ULTIMA
+ws_fechas.update("D2", total_partidos)  # NP ULTIMA
 
-    try:
-        wb = load_workbook(EXCEL_LINKS)
-        if HOJA_LINKS not in wb.sheetnames:
-            print(f"❌ No se encontró la hoja '{HOJA_LINKS}' en el archivo Excel.")
-        else:
-            ws = wb[HOJA_LINKS]
-
-            headers = [cell.value for cell in ws[1]]
-            if "LIGA" not in headers or "BETPLAY" not in headers or "ENCENDIDO" not in headers:
-                print("❌ La hoja no contiene las columnas necesarias ('LIGA', 'ENCENDIDO', 'BETPLAY').")
-            else:
-                idx_liga = headers.index("LIGA") + 1
-                idx_encendido = headers.index("ENCENDIDO") + 1
-                idx_betplay = headers.index("BETPLAY") + 1
-                if "NP BETPLAY" not in headers:
-                    ws.cell(row=1, column=len(headers) + 1).value = "NP BETPLAY"
-                    idx_np = len(headers) + 1
-                else:
-                    idx_np = headers.index("NP BETPLAY") + 1
-
-                for row in range(2, ws.max_row + 1):
-                    liga = str(ws.cell(row=row, column=idx_liga).value or "").strip()
-                    encendido = str(ws.cell(row=row, column=idx_encendido).value or "").strip().upper()
-                    link = str(ws.cell(row=row, column=idx_betplay).value or "").strip()
-
-                    valor_np = ""
-                    if link == "" or not link.startswith("http"):
-                        valor_np = ""
-                    elif encendido != "ACTIVO":
-                        valor_np = ""
-                    elif liga in np_por_liga:
-                        valor = np_por_liga[liga]
-                        if valor == "NO INICIADO":
-                            valor_np = "NO INICIADO"
-                        elif isinstance(valor, int) and valor == 0:
-                            valor_np = 0
-                        else:
-                            valor_np = valor
-
-                    ws.cell(row=row, column=idx_np, value=valor_np)
-
-            wb.save(EXCEL_LINKS)
-            wb.close()
-            print(f"💾 Actualizado solo la columna 'NP BETPLAY' en '{HOJA_LINKS}'.")
-    except Exception as e:
-        print(f"❌ Error guardando NP BETPLAY en {EXCEL_LINKS}: {e}")
-
-    print(f"\n⏱️ Tiempo total de ejecución: {time.time() - start_time:.2f} segundos")
-    print(f"📊 Total de partidos extraídos: {total_partidos_extraidos}")
-
+print(f"\n⏱️ Scraper finalizado. Total partidos extraídos: {total_partidos}")
