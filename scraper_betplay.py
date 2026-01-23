@@ -19,9 +19,9 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
 gc = gspread.authorize(creds)
 
 # URLs de Google Sheets
-URL_LIGAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?gid=0&single=true&output=csv"
-URL_BETPLAY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiLCx619Apna4bw3dlY-vcN4rzrhV5JOwb5tXujOcjZIP_F050Z4aJ3IytSCpU6GNqfeA6ymYGjATM/pub?gid=0&single=true&output=csv"
-URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjU9YAn48_nYN7_eQxOIg7jz3jFxySgIgqdum0nFiu4CH88mCJpxIx-H1pfEIsZ7qGhHl57hxj1qwV/pub?gid=0&single=true&output=csv"
+URL_LIGAS = "https://docs.google.com/spreadsheets/d/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/edit#gid=0"
+URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit#gid=0"
+URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/1Uwty-fiIWzodWywxk9DIyDU7n_27__bL8X-RADwesa8/edit#gid=0"
 
 # ------------------------------
 # FUNCIONES AUXILIARES
