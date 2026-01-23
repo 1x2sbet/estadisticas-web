@@ -19,14 +19,12 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
 gc = gspread.authorize(creds)
 
 # URLs de Google Sheets
-# 1️⃣ Hoja de ligas activas (CSV publicada en la web)
+# LIGAS sigue siendo CSV publicado
 URL_LIGAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
 
-# 2️⃣ Libro donde se guardan los datos extraídos
-URL_BETPLAY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiLCx619Apna4bw3dlY-vcN4rzrhV5JOwb5tXujOcjZIP_F050Z4aJ3IytSCpU6GNqfeA6ymYGjATM/pub"
-
-# 3️⃣ Libro donde se guarda el control de fechas y NP
-URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjU9YAn48_nYN7_eQxOIg7jz3jFxySgIgqdum0nFiu4CH88mCJpxIx-H1pfEIsZ7qGhHl57hxj1qwV/pub"
+# BETPLAY y DATOS HORARIOS deben usar la URL de edición
+URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit#gid=0"
+URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/1Uwty-fiIWzodWywxk9DIyDU7n_27__bL8X-RADwesa8/edit#gid=0"
 
 # ------------------------------
 # FUNCIONES AUXILIARES
@@ -53,11 +51,13 @@ def formatear_fecha_hora(fecha_texto, hora_texto):
         try:
             fecha = datetime.strptime(fecha_texto, "%d/%m/%Y")
         except:
-            fecha = hoy
+            fecha = hoy  # fallback
+
     try:
         hora = datetime.strptime(hora_texto, "%H:%M").time()
     except:
         hora = datetime.strptime("00:00", "%H:%M").time()
+
     fecha_formato = fecha.strftime("%d/%m/%Y")
     hora_formato = hora.strftime("%H:%M")
     return fecha_formato, hora_formato
