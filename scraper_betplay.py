@@ -19,13 +19,8 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
 gc = gspread.authorize(creds)
 
 # URLs de Google Sheets
-# CSV publicado para leer ligas activas
-URL_LIGAS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
-# URL de edición para gspread (actualización NP BETPLAY)
-URL_LIGAS_EDIT = "https://docs.google.com/spreadsheets/d/1XXXXX/edit#gid=0"  # <-- reemplaza 1XXXXX con el ID real de tu hoja LIGAS
-# URL de edición para BETPLAY
+URL_LIGAS_EDIT = "https://docs.google.com/spreadsheets/d/12Cu-9JFawygQ8G7kIR0ai3EII09s21Gz3HguS1Botm4/edit#gid=0"
 URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit#gid=0"
-# URL de edición para DATOS HORARIOS
 URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/1Uwty-fiIWzodWywxk9DIyDU7n_27__bL8X-RADwesa8/edit#gid=0"
 
 # ------------------------------
@@ -33,8 +28,8 @@ URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/1Uwty-fiIWzodWywxk9
 # ------------------------------
 
 def leer_ligas():
-    """Leer ligas activas desde Google Sheets (CSV publicado)"""
-    df = pd.read_csv(URL_LIGAS_CSV)
+    """Leer ligas activas desde Google Sheets"""
+    df = pd.read_csv(URL_LIGAS_EDIT.replace("/edit#gid=0", "/export?format=csv"))
     df.columns = [c.strip().upper() for c in df.columns]
     df = df[df['ENCENDIDO'] == True]
     urls = df[['LIGA', 'BETPLAY']].dropna()
@@ -65,7 +60,7 @@ def formatear_fecha_hora(fecha_texto, hora_texto):
     return fecha_formato, hora_formato
 
 def actualizar_np_ligas(np_por_liga):
-    """Actualiza la columna NP BETPLAY en la hoja LIGAS usando URL de edición"""
+    """Actualiza la columna NP BETPLAY en la hoja LIGAS"""
     sheet = gc.open_by_url(URL_LIGAS_EDIT).worksheet("LIGA")
     data = sheet.get_all_records()
     for idx, row in enumerate(data, start=2):
