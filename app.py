@@ -27,7 +27,7 @@ seccion = st.sidebar.radio(
 )
 
 # ---------------------------------
-# CONTENIDO
+# CONTENIDO PRINCIPAL
 # ---------------------------------
 
 # ========= INICIO =========
@@ -42,6 +42,7 @@ if seccion == "🏠 Inicio":
 
 # ========= PREFERENCIAS =========
 elif seccion == "⚙️ Preferencias":
+
     submenu = st.selectbox(
         "Preferencias",
         ["Casas de Apuestas", "Ligas"],
@@ -49,45 +50,46 @@ elif seccion == "⚙️ Preferencias":
     )
 
     # ----- CASAS DE APUESTAS -----
-   if submenu == "Casas de Apuestas":
-    st.title("🏦 Casas de Apuestas Legales en Colombia")
-    st.write("Activa o desactiva las casas que deseas usar en los análisis.")
+    if submenu == "Casas de Apuestas":
 
-    casas = {
-        "BETANO": "assets/logos/betano.png",
-        "BETPLAY": "assets/logos/betplay.png",
-        "BETSSON": "assets/logos/betsson.png",
-        "BINGOCASINOS": "assets/logos/bingocasinos.png",
-        "BWIN": "assets/logos/bwin.png",
-        "CODERE": "assets/logos/codere.png",
-        "LUCKIA": "assets/logos/luckia.png",
-        "RIVALO": "assets/logos/rivalo.png",
-        "RUSHBET": "assets/logos/rushbet.png",
-        "SPORTIUM": "assets/logos/sportium.png",
-        "STAKE": "assets/logos/stake.png",
-        "WPLAY": "assets/logos/wplay.png",
-        "YAJUEGO": "assets/logos/yajuego.png",
-        "ZAMBA": "assets/logos/zamba.png",
-    }
+        st.title("🏦 Casas de Apuestas Legales en Colombia")
+        st.write("Activa o desactiva las casas que deseas usar en los análisis.")
 
-    if "casas_activas" not in st.session_state:
-        st.session_state.casas_activas = {casa: True for casa in casas}
+        casas = {
+            "BETANO": "assets/logos/betano.png",
+            "BETPLAY": "assets/logos/betplay.png",
+            "BETSSON": "assets/logos/betsson.png",
+            "BINGOCASINOS": "assets/logos/bingocasinos.png",
+            "BWIN": "assets/logos/bwin.png",
+            "CODERE": "assets/logos/codere.png",
+            "LUCKIA": "assets/logos/luckia.png",
+            "RIVALO": "assets/logos/rivalo.png",
+            "RUSHBET": "assets/logos/rushbet.png",
+            "SPORTIUM": "assets/logos/sportium.png",
+            "STAKE": "assets/logos/stake.png",
+            "WPLAY": "assets/logos/wplay.png",
+            "YAJUEGO": "assets/logos/yajuego.png",
+            "ZAMBA": "assets/logos/zamba.png",
+        }
 
-    for casa, logo_path in casas.items():
-        col1, col2 = st.columns([1, 6])
+        if "casas_activas" not in st.session_state:
+            st.session_state.casas_activas = {casa: True for casa in casas}
 
-        with col1:
-            st.image(logo_path, width=35)
+        for casa, logo_path in casas.items():
+            col1, col2 = st.columns([1, 6])
 
-        with col2:
-            st.session_state.casas_activas[casa] = st.checkbox(
-                casa,
-                value=st.session_state.casas_activas[casa],
-                key=f"check_{casa}"
-            )
+            with col1:
+                st.image(logo_path, width=35)
 
-    st.divider()
-    st.success("Preferencias guardadas correctamente.")
+            with col2:
+                st.session_state.casas_activas[casa] = st.checkbox(
+                    casa,
+                    value=st.session_state.casas_activas[casa],
+                    key=f"check_{casa}"
+                )
+
+        st.divider()
+        st.success("Preferencias guardadas correctamente.")
 
     # ----- LIGAS -----
     elif submenu == "Ligas":
@@ -96,6 +98,7 @@ elif seccion == "⚙️ Preferencias":
 
 # ========= ANÁLISIS =========
 elif seccion == "📊 Análisis":
+
     submenu = st.selectbox(
         "Tipo de análisis",
         [
@@ -112,6 +115,7 @@ elif seccion == "📊 Análisis":
 
 # ========= HERRAMIENTAS =========
 elif seccion == "🧮 Herramientas":
+
     submenu = st.selectbox(
         "Herramientas",
         ["Calculadora", "Convertidor de Bonos"],
@@ -123,6 +127,7 @@ elif seccion == "🧮 Herramientas":
 
 # ========= GESTIÓN =========
 elif seccion == "💼 Gestión":
+
     submenu = st.selectbox(
         "Gestión",
         [
