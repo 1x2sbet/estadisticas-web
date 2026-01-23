@@ -19,10 +19,14 @@ creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
 gc = gspread.authorize(creds)
 
 # URLs de Google Sheets
+# 1️⃣ Hoja de ligas activas (CSV publicada en la web)
 URL_LIGAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
-df_ligas = pd.read_csv(URL_LIGAS)
-URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit#gid=0"
-URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/1Uwty-fiIWzodWywxk9DIyDU7n_27__bL8X-RADwesa8/edit#gid=0"
+
+# 2️⃣ Libro donde se guardan los datos extraídos
+URL_BETPLAY = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSiLCx619Apna4bw3dlY-vcN4rzrhV5JOwb5tXujOcjZIP_F050Z4aJ3IytSCpU6GNqfeA6ymYGjATM/pub"
+
+# 3️⃣ Libro donde se guarda el control de fechas y NP
+URL_DATOS_HORARIOS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vSjU9YAn48_nYN7_eQxOIg7jz3jFxySgIgqdum0nFiu4CH88mCJpxIx-H1pfEIsZ7qGhHl57hxj1qwV/pub"
 
 # ------------------------------
 # FUNCIONES AUXILIARES
@@ -46,12 +50,10 @@ def formatear_fecha_hora(fecha_texto, hora_texto):
     elif fecha_texto in ['mañana']:
         fecha = hoy + timedelta(days=1)
     else:
-        # intentar parsear fecha explícita, asumiendo formato dd/mm/yyyy
         try:
             fecha = datetime.strptime(fecha_texto, "%d/%m/%Y")
         except:
-            fecha = hoy  # fallback
-    # hora
+            fecha = hoy
     try:
         hora = datetime.strptime(hora_texto, "%H:%M").time()
     except:
@@ -97,15 +99,12 @@ def main():
     urls = leer_ligas()
     print(f"✅ {len(urls)} ligas activas encontradas.")
 
-    # Aquí iría tu lógica de extracción con Playwright (o requests)
-    # Por simplicidad, simulamos extracción
     resultados = []
     np_por_liga = {}
 
     for idx, row in urls.iterrows():
         liga = row['LIGA']
         link = row['BETPLAY']
-        # Simular extracción
         print(f"Extrayendo partidos de {liga} ({link}) ...")
         cantidad = 5  # simulamos 5 partidos
         np_por_liga[liga] = cantidad
@@ -125,22 +124,18 @@ def main():
                 "C MENOS": ""
             })
 
-    # Guardar respaldo de BETPLAYULTIMO
     print("💾 Respaldando BETPLAYULTIMO a BETPLAYPREVIO...")
     respaldar_betplay("BETPLAYULTIMO")
 
-    # Guardar nuevos datos en BETPLAYULTIMO
     print("💾 Actualizando BETPLAYULTIMO...")
     sh = gc.open_by_url(URL_BETPLAY).worksheet("BETPLAYULTIMO")
     df_nuevo = pd.DataFrame(resultados)
     sh.clear()
     sh.update([df_nuevo.columns.values.tolist()] + df_nuevo.values.tolist())
 
-    # Actualizar NP BETPLAY
     print("🔢 Actualizando NP BETPLAY...")
     actualizar_np_ligas(np_por_liga)
 
-    # Actualizar DATOS HORARIOS
     print("⏱ Actualizando DATOS HORARIOS...")
     actualizar_datos_horarios(np_total=sum(np_por_liga.values()))
 
