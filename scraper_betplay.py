@@ -2,6 +2,8 @@ import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
 import pandas as pd
+import os
+import json
 
 # ==============================
 # CONFIGURACIÓN
@@ -18,7 +20,7 @@ HOJA_NP = "NP"
 HOJA_FECHAS = "FECHAS"
 
 # ==============================
-# AUTENTICACIÓN
+# AUTENTICACIÓN (GOOGLE_CREDS_JSON)
 # ==============================
 
 scope = [
@@ -26,9 +28,8 @@ scope = [
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds = ServiceAccountCredentials.from_json_keyfile_name(
-    "credentials.json", scope
-)
+creds_json = json.loads(os.environ["GOOGLE_CREDS_JSON"])
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 gc = gspread.authorize(creds)
 
 # ==============================
