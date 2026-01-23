@@ -49,45 +49,45 @@ elif seccion == "⚙️ Preferencias":
     )
 
     # ----- CASAS DE APUESTAS -----
-    if submenu == "Casas de Apuestas":
-        st.title("🏦 Casas de Apuestas Legales en Colombia")
-        st.write("Activa o desactiva las casas que deseas usar en los análisis.")
+   if submenu == "Casas de Apuestas":
+    st.title("🏦 Casas de Apuestas Legales en Colombia")
+    st.write("Activa o desactiva las casas que deseas usar en los análisis.")
 
-        casas = {
-            "BETANO": "https://upload.wikimedia.org/wikipedia/commons/4/4b/Betano_logo.png",
-            "BETPLAY": "https://upload.wikimedia.org/wikipedia/commons/5/5f/BetPlay_logo.png",
-            "BETSSON": "https://upload.wikimedia.org/wikipedia/commons/9/9b/Betsson_logo.png",
-            "BINGOCASINOS": "https://bingocasinos.com.co/favicon.ico",
-            "BWIN": "https://upload.wikimedia.org/wikipedia/commons/1/1b/Bwin_logo.svg",
-            "CODERE": "https://upload.wikimedia.org/wikipedia/commons/6/6e/Codere_logo.png",
-            "LUCKIA": "https://upload.wikimedia.org/wikipedia/commons/3/3e/Luckia_logo.png",
-            "RIVALO": "https://upload.wikimedia.org/wikipedia/commons/7/7b/Rivalo_logo.png",
-            "RUSHBET": "https://upload.wikimedia.org/wikipedia/commons/0/08/Rushbet_logo.png",
-            "SPORTIUM": "https://upload.wikimedia.org/wikipedia/commons/4/4d/Sportium_logo.png",
-            "STAKE": "https://upload.wikimedia.org/wikipedia/commons/6/6b/Stake_logo.png",
-            "WPLAY": "https://upload.wikimedia.org/wikipedia/commons/8/8b/Wplay_logo.png",
-            "YAJUEGO": "https://yajuego.com.co/favicon.ico",
-            "ZAMBA": "https://zamba.co/favicon.ico",
-        }
+    casas = {
+        "BETANO": "assets/logos/betano.png",
+        "BETPLAY": "assets/logos/betplay.png",
+        "BETSSON": "assets/logos/betsson.png",
+        "BINGOCASINOS": "assets/logos/bingocasinos.png",
+        "BWIN": "assets/logos/bwin.png",
+        "CODERE": "assets/logos/codere.png",
+        "LUCKIA": "assets/logos/luckia.png",
+        "RIVALO": "assets/logos/rivalo.png",
+        "RUSHBET": "assets/logos/rushbet.png",
+        "SPORTIUM": "assets/logos/sportium.png",
+        "STAKE": "assets/logos/stake.png",
+        "WPLAY": "assets/logos/wplay.png",
+        "YAJUEGO": "assets/logos/yajuego.png",
+        "ZAMBA": "assets/logos/zamba.png",
+    }
 
-        if "casas_activas" not in st.session_state:
-            st.session_state.casas_activas = {casa: True for casa in casas}
+    if "casas_activas" not in st.session_state:
+        st.session_state.casas_activas = {casa: True for casa in casas}
 
-        for casa, logo in casas.items():
-            col1, col2 = st.columns([1, 6])
+    for casa, logo_path in casas.items():
+        col1, col2 = st.columns([1, 6])
 
-            with col1:
-                st.image(logo, width=30)
+        with col1:
+            st.image(logo_path, width=35)
 
-            with col2:
-                st.session_state.casas_activas[casa] = st.checkbox(
-                    casa,
-                    value=st.session_state.casas_activas[casa],
-                    key=f"check_{casa}"
-                )
+        with col2:
+            st.session_state.casas_activas[casa] = st.checkbox(
+                casa,
+                value=st.session_state.casas_activas[casa],
+                key=f"check_{casa}"
+            )
 
-        st.divider()
-        st.success("Preferencias guardadas para esta sesión.")
+    st.divider()
+    st.success("Preferencias guardadas correctamente.")
 
     # ----- LIGAS -----
     elif submenu == "Ligas":
