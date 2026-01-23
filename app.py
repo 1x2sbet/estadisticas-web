@@ -20,7 +20,8 @@ seccion = st.sidebar.radio(
     "Navegación",
     [
         "🏠 Inicio",
-        "⚙️ Preferencias",
+        "🏦 Casas de Apuestas",
+        "🏆 Ligas",
         "📊 Análisis",
         "🧮 Herramientas",
         "💼 Gestión"
@@ -41,102 +42,96 @@ if seccion == "🏠 Inicio":
         """
     )
 
-# ========= PREFERENCIAS =========
-elif seccion == "⚙️ Preferencias":
+# ========= CASAS DE APUESTAS =========
+elif seccion == "🏦 Casas de Apuestas":
 
-    submenu = st.selectbox(
-        "Preferencias",
-        ["Casas de Apuestas", "Ligas"]
-    )
+    st.title("🏦 Casas de Apuestas Legales en Colombia")
+    st.write("Activa o desactiva las casas que deseas usar en los análisis.")
 
-    # ----- CASAS DE APUESTAS -----
-    if submenu == "Casas de Apuestas":
+    casas = {
+        "BETANO": "assets/logos/betano.png",
+        "BETPLAY": "assets/logos/betplay.png",
+        "BETSSON": "assets/logos/betsson.png",
+        "BINGOCASINOS": "assets/logos/bingocasinos.png",
+        "BWIN": "assets/logos/bwin.png",
+        "CODERE": "assets/logos/codere.png",
+        "LUCKIA": "assets/logos/luckia.png",
+        "RIVALO": "assets/logos/rivalo.png",
+        "RUSHBET": "assets/logos/rushbet.png",
+        "SPORTIUM": "assets/logos/sportium.png",
+        "STAKE": "assets/logos/stake.png",
+        "WPLAY": "assets/logos/wplay.png",
+        "YAJUEGO": "assets/logos/yajuego.png",
+        "ZAMBA": "assets/logos/zamba.png",
+    }
 
-        st.title("🏦 Casas de Apuestas Legales en Colombia")
-        st.write("Activa o desactiva las casas que deseas usar en los análisis.")
+    if "casas_activas" not in st.session_state:
+        st.session_state.casas_activas = {casa: True for casa in casas}
 
-        casas = {
-            "BETANO": "assets/logos/betano.png",
-            "BETPLAY": "assets/logos/betplay.png",
-            "BETSSON": "assets/logos/betsson.png",
-            "BINGOCASINOS": "assets/logos/bingocasinos.png",
-            "BWIN": "assets/logos/bwin.png",
-            "CODERE": "assets/logos/codere.png",
-            "LUCKIA": "assets/logos/luckia.png",
-            "RIVALO": "assets/logos/rivalo.png",
-            "RUSHBET": "assets/logos/rushbet.png",
-            "SPORTIUM": "assets/logos/sportium.png",
-            "STAKE": "assets/logos/stake.png",
-            "WPLAY": "assets/logos/wplay.png",
-            "YAJUEGO": "assets/logos/yajuego.png",
-            "ZAMBA": "assets/logos/zamba.png",
-        }
+    for casa, logo_path in casas.items():
+        col1, col2 = st.columns([1, 6])
 
-        if "casas_activas" not in st.session_state:
-            st.session_state.casas_activas = {casa: True for casa in casas}
+        with col1:
+            st.image(logo_path, width=35)
 
-        for casa, logo_path in casas.items():
-            col1, col2 = st.columns([1, 6])
-
-            with col1:
-                st.image(logo_path, width=35)
-
-            with col2:
-                st.session_state.casas_activas[casa] = st.checkbox(
-                    casa,
-                    value=st.session_state.casas_activas[casa],
-                    key=f"check_{casa}"
-                )
-
-        st.success("Preferencias guardadas correctamente.")
-
-    # ----- LIGAS -----
-    elif submenu == "Ligas":
-
-        st.title("🏆 Ligas a Analizar")
-        st.write("Selecciona continentes, países y ligas desde la base de datos.")
-
-        ruta_csv = "data/data/ligas.csv"
-
-        if not os.path.exists(ruta_csv):
-            st.error("❌ No se encontró el archivo data/data/ligas.csv")
-            st.stop()
-
-        df = pd.read_csv(ruta_csv)
-
-        # NORMALIZAR NOMBRES DE COLUMNAS
-        df.columns = df.columns.str.strip().str.lower()
-        st.subheader("📄 Base de datos de ligas")
-        st.dataframe(df, use_container_width=True)
-
-        # Filtro por continente
-        continentes = sorted(df["continente"].unique())
-        continente_sel = st.selectbox("🌍 Continente", continentes)
-
-        df_cont = df[df["continente"] == continente_sel]
-
-        # Filtro por país
-        paises = sorted(df_cont["pais"].unique())
-        pais_sel = st.selectbox("🏳️ País", paises)
-
-        df_pais = df_cont[df_cont["pais"] == pais_sel]
-
-        st.subheader("⚽ Ligas")
-
-        if "ligas_activas" not in st.session_state:
-            st.session_state.ligas_activas = {}
-
-        for _, row in df_pais.iterrows():
-            liga = row["liga"]
-            activa = bool(row["activa"])
-
-            st.session_state.ligas_activas[liga] = st.checkbox(
-                liga,
-                value=st.session_state.ligas_activas.get(liga, activa),
-                key=f"liga_{liga}"
+        with col2:
+            st.session_state.casas_activas[casa] = st.checkbox(
+                casa,
+                value=st.session_state.casas_activas[casa],
+                key=f"check_{casa}"
             )
 
-        st.success("Selección de ligas cargada correctamente.")
+    st.success("Casas de apuestas configuradas correctamente.")
+
+# ========= LIGAS =========
+elif seccion == "🏆 Ligas":
+
+    st.title("🏆 Ligas a Analizar")
+    st.write("Selecciona continentes, países y ligas desde la base de datos.")
+
+    ruta_csv = "data/data/ligas.csv"
+
+    if not os.path.exists(ruta_csv):
+        st.error("❌ No se encontró el archivo data/data/ligas.csv")
+        st.stop()
+
+    df = pd.read_csv(ruta_csv)
+
+    # Normalizar nombres de columnas
+    df.columns = df.columns.str.strip().str.lower()
+
+    # Mostrar tabla (temporal)
+    st.subheader("📄 Base de datos de ligas")
+    st.dataframe(df, use_container_width=True)
+
+    # Filtro por continente
+    continentes = sorted(df["continente"].unique())
+    continente_sel = st.selectbox("🌍 Continente", continentes)
+
+    df_cont = df[df["continente"] == continente_sel]
+
+    # Filtro por país
+    paises = sorted(df_cont["pais"].unique())
+    pais_sel = st.selectbox("🏳️ País", paises)
+
+    df_pais = df_cont[df_cont["pais"] == pais_sel]
+
+    st.subheader("⚽ Ligas")
+
+    if "ligas_activas" not in st.session_state:
+        st.session_state.ligas_activas = {}
+
+    for _, row in df_pais.iterrows():
+        liga = row["liga"]
+        activa = bool(row["activa"])
+
+        st.session_state.ligas_activas[liga] = st.checkbox(
+            liga,
+            value=st.session_state.ligas_activas.get(liga, activa),
+            key=f"liga_{liga}"
+        )
+
+    st.success("Ligas cargadas correctamente.")
 
 # ========= ANÁLISIS =========
 elif seccion == "📊 Análisis":
