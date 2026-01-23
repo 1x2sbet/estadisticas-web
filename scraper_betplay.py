@@ -9,8 +9,8 @@ import json
 # CONFIGURACIÓN
 # ==============================
 
-URL_LIGAS = "https://docs.google.com/spreadsheets/d/TU_ID_LIGAS"
-URL_BETPLAY = "https://docs.google.com/spreadsheets/d/TU_ID_BETPLAY"
+URL_LIGAS = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
+URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit?usp=sharing"
 
 HOJA_LIGAS = "LIGAS"
 
