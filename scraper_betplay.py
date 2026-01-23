@@ -1,6 +1,7 @@
 import gspread
 from oauth2client.service_account import ServiceAccountCredentials
 from datetime import datetime
+from zoneinfo import ZoneInfo
 import pandas as pd
 import os
 import json
@@ -9,7 +10,12 @@ import json
 # CONFIGURACIÓN
 # ==============================
 
-URL_LIGAS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
+URL_LIGAS_CSV = (
+    "https://docs.google.com/spreadsheets/d/e/"
+    "2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve"
+    "/pub?output=csv"
+)
+
 URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit?usp=sharing"
 
 HOJA_ULTIMO = "BETPLAYULTIMO"
@@ -38,16 +44,32 @@ def leer_ligas():
     df = pd.read_csv(URL_LIGAS_CSV)
     df.columns = [c.strip().upper() for c in df.columns]
 
+    # fila real en Google Sheets
     df["FILA_REAL"] = df.index + 2
+
+    # normalizar booleanos
+    df["ENCENDIDO"] = df["ENCENDIDO"].astype(str).str.upper() == "TRUE"
+
     return df
 
 # ==============================
-# SCRAPER (TU LÓGICA REAL VA AQUÍ)
+# SCRAPER REAL (PLACEHOLDER)
 # ==============================
 
 def extraer_partidos(url):
-    # ESTA FUNCIÓN DEBE SER TU SCRAPER REAL
-    return ["PARTIDO 1", "PARTIDO 2"]
+    """
+    AQUÍ VA TU SCRAPER REAL
+    Debe retornar una lista de filas:
+    [
+      [PAIS, LIGA, DIA, HORA, LOCAL, VISITANTE, L, X, V, LIMITE, C+, C-],
+      ...
+    ]
+    """
+    # EJEMPLO TEMPORAL
+    return [
+        ["COL", "LIGA X", "01/01/2026", "18:00", "LOCAL A", "VISITANTE B", "1.80", "3.20", "4.50", "2.5", "1.90", "1.90"],
+        ["COL", "LIGA X", "01/01/2026", "20:00", "LOCAL C", "VISITANTE D", "2.10", "3.00", "3.80", "2.5", "1.85", "1.95"],
+    ]
 
 # ==============================
 # RESPALDAR ULTIMO → PREVIO
@@ -96,10 +118,10 @@ def actualizar_np(ligas_df, np_dict):
     for _, row in ligas_df.iterrows():
         fila = int(row["FILA_REAL"])
 
-        if row["ENCENDIDO"] is True:
+        if row["ENCENDIDO"]:
             np_val = np_dict.get(row["BETPLAY"], 0)
         else:
-            np_val = ""
+            np_val = ""  # limpiar NP si está apagada
 
         updates.append({
             "range": gspread.utils.rowcol_to_a1(fila, col_np),
@@ -109,14 +131,14 @@ def actualizar_np(ligas_df, np_dict):
     ws.batch_update(updates)
 
 # ==============================
-# ACTUALIZAR FECHAS
+# ACTUALIZAR FECHAS (BOGOTÁ)
 # ==============================
 
 def actualizar_fechas(np_total):
     sh = gc.open_by_url(URL_BETPLAY)
     ws = sh.worksheet(HOJA_FECHAS)
 
-    hoy = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    ahora = datetime.now(ZoneInfo("America/Bogota")).strftime("%Y-%m-%d %H:%M:%S")
     valores = ws.col_values(2)
 
     fecha_previa = valores[3] if len(valores) > 3 else ""
@@ -125,7 +147,7 @@ def actualizar_fechas(np_total):
     ws.update("B2:B5", [
         [fecha_previa],
         [np_previa],
-        [hoy],
+        [ahora],
         [np_total]
     ])
 
@@ -141,9 +163,10 @@ def main():
     np_por_liga = {}
 
     for _, row in ligas.iterrows():
-        if row["ENCENDIDO"] is True:
+        if row["ENCENDIDO"]:
             print(f"Extrayendo {row['LIGA']}...")
             partidos = extraer_partidos(row["BETPLAY"])
+
             todos_los_partidos.extend(partidos)
             np_por_liga[row["BETPLAY"]] = len(partidos)
 
