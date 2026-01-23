@@ -1,133 +1,90 @@
+import gspread
+from oauth2client.service_account import ServiceAccountCredentials
+from datetime import datetime
+import pandas as pd
 import os
 import json
-import gspread
-import pandas as pd
-from oauth2client.service_account import ServiceAccountCredentials
-from datetime import datetime, timedelta
 
-# =========================================================
+# ==============================
 # CONFIGURACIÓN
-# =========================================================
+# ==============================
 
-# LECTURA DE LIGAS (CSV PÚBLICO)
-URL_LIGAS_CSV = (
-    "https://docs.google.com/spreadsheets/d/e/"
-    "2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve"
-    "/pub?output=csv"
-)
-
-# LIBRO BETPLAY (GUARDADO)
-URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit"
+URL_LIGAS_CSV = "https://docs.google.com/spreadsheets/d/e/2PACX-1vRV_Y8liM7yoZOX-wo6xQraDds-S8rcwFEbit_4NqAaH8mz1I6kAG7z1pF67YFrej-MMfsNnC26J4ve/pub?output=csv"
+URL_BETPLAY = "https://docs.google.com/spreadsheets/d/1fRLO4dnVoLh_wyBTZIcJsNFUKnH9SJuxJAvRuaIUpTg/edit?usp=sharing"
 
 HOJA_ULTIMO = "BETPLAYULTIMO"
 HOJA_PREVIO = "BETPLAYPREVIO"
-HOJA_NP = "NP"
+HOJA_NP = "LIGAS"
 HOJA_FECHAS = "FECHAS"
 
-# =========================================================
-# AUTENTICACIÓN GOOGLE (GITHUB ACTIONS)
-# =========================================================
+# ==============================
+# AUTENTICACIÓN
+# ==============================
 
-SCOPE = [
+scope = [
     "https://spreadsheets.google.com/feeds",
     "https://www.googleapis.com/auth/drive"
 ]
 
-creds_dict = json.loads(os.environ["GOOGLE_CREDS_JSON"])
-creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
+creds_json = json.loads(os.environ["GOOGLE_CREDS_JSON"])
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_json, scope)
 gc = gspread.authorize(creds)
 
-# =========================================================
-# UTILIDADES FECHA / HORA
-# =========================================================
-
-def convertir_fecha(texto):
-    hoy = datetime.now().date()
-    texto = texto.lower().strip()
-
-    if texto == "hoy":
-        fecha = hoy
-    elif texto == "mañana":
-        fecha = hoy + timedelta(days=1)
-    else:
-        try:
-            fecha = datetime.strptime(texto, "%d/%m/%Y").date()
-        except:
-            fecha = hoy
-
-    return fecha.strftime("%d/%m/%Y")
-
-# =========================================================
-# LEER LIGAS ACTIVAS
-# =========================================================
+# ==============================
+# LEER LIGAS (CON FILA REAL)
+# ==============================
 
 def leer_ligas():
     df = pd.read_csv(URL_LIGAS_CSV)
     df.columns = [c.strip().upper() for c in df.columns]
 
-    df = df[df["ENCENDIDO"] == True]
-    return df.reset_index(drop=True)
+    df["FILA_REAL"] = df.index + 2
+    return df
 
-# =========================================================
-# SCRAPER REAL (AQUÍ VA TU PLAYWRIGHT)
-# =========================================================
+# ==============================
+# SCRAPER (TU LÓGICA REAL VA AQUÍ)
+# ==============================
 
-def extraer_partidos(url, liga):
-    """
-    REEMPLAZA ESTA FUNCIÓN CON TU SCRAPER REAL
-    Debe devolver lista de dict con las columnas finales
-    """
+def extraer_partidos(url):
+    # ESTA FUNCIÓN DEBE SER TU SCRAPER REAL
+    return ["PARTIDO 1", "PARTIDO 2"]
 
-    hoy = datetime.now().strftime("%d/%m/%Y")
-
-    return [
-        {
-            "PAIS": "COLOMBIA",
-            "LIGA": liga,
-            "DIA": hoy,
-            "HORA": "14:00",
-            "LOCAL": "Equipo A",
-            "VISITANTE": "Equipo B",
-            "L": "",
-            "X": "",
-            "V": "",
-            "LIMITE GOL": "",
-            "C MAS": "",
-            "C MENOS": ""
-        }
-    ]
-
-# =========================================================
-# RESPALDAR BETPLAYULTIMO → BETPLAYPREVIO
-# =========================================================
+# ==============================
+# RESPALDAR ULTIMO → PREVIO
+# ==============================
 
 def respaldar_betplay():
     sh = gc.open_by_url(URL_BETPLAY)
-    ws_ultimo = sh.worksheet(HOJA_ULTIMO)
-    ws_previo = sh.worksheet(HOJA_PREVIO)
+    ws_u = sh.worksheet(HOJA_ULTIMO)
+    ws_p = sh.worksheet(HOJA_PREVIO)
 
-    data = ws_ultimo.get_all_values()
-    ws_previo.clear()
-
+    data = ws_u.get_all_values()
+    ws_p.clear()
     if data:
-        ws_previo.update(data)
+        ws_p.update(data)
 
-# =========================================================
-# GUARDAR BETPLAYULTIMO
-# =========================================================
+# ==============================
+# GUARDAR PARTIDOS
+# ==============================
 
-def guardar_betplay(df):
+def guardar_partidos(partidos):
     sh = gc.open_by_url(URL_BETPLAY)
     ws = sh.worksheet(HOJA_ULTIMO)
 
     ws.clear()
-    ws.update([df.columns.tolist()] + df.values.tolist())
+    ws.update([[
+        "PAIS","LIGA","DIA","HORA","LOCAL","VISITANTE",
+        "L","X","V","LIMITE GOL","C MAS","C MENOS"
+    ]])
 
-# =========================================================
-# ACTUALIZAR NP BETPLAY
-# =========================================================
+    if partidos:
+        ws.update(partidos, "A2")
 
-def actualizar_np(np_por_liga):
+# ==============================
+# ACTUALIZAR / LIMPIAR NP BETPLAY
+# ==============================
+
+def actualizar_np(ligas_df, np_dict):
     sh = gc.open_by_url(URL_BETPLAY)
     ws = sh.worksheet(HOJA_NP)
 
@@ -135,24 +92,31 @@ def actualizar_np(np_por_liga):
     col_np = headers.index("NP BETPLAY") + 1
 
     updates = []
-    for i, np_val in enumerate(np_por_liga, start=2):
+
+    for _, row in ligas_df.iterrows():
+        fila = int(row["FILA_REAL"])
+
+        if row["ENCENDIDO"] is True:
+            np_val = np_dict.get(row["BETPLAY"], 0)
+        else:
+            np_val = ""
+
         updates.append({
-            "range": gspread.utils.rowcol_to_a1(i, col_np),
+            "range": gspread.utils.rowcol_to_a1(fila, col_np),
             "values": [[np_val]]
         })
 
     ws.batch_update(updates)
 
-# =========================================================
+# ==============================
 # ACTUALIZAR FECHAS
-# =========================================================
+# ==============================
 
 def actualizar_fechas(np_total):
     sh = gc.open_by_url(URL_BETPLAY)
     ws = sh.worksheet(HOJA_FECHAS)
 
-    ahora = datetime.now().strftime("%d/%m/%Y %H:%M")
-
+    hoy = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     valores = ws.col_values(2)
 
     fecha_previa = valores[3] if len(valores) > 3 else ""
@@ -161,45 +125,41 @@ def actualizar_fechas(np_total):
     ws.update("B2:B5", [
         [fecha_previa],
         [np_previa],
-        [ahora],
+        [hoy],
         [np_total]
     ])
 
-# =========================================================
+# ==============================
 # MAIN
-# =========================================================
+# ==============================
 
 def main():
-    print("📚 Leyendo ligas activas...")
+    print("📚 Leyendo ligas...")
     ligas = leer_ligas()
-    print(f"✅ {len(ligas)} ligas activas encontradas")
 
-    todos = []
-    np_ligas = []
+    todos_los_partidos = []
+    np_por_liga = {}
 
     for _, row in ligas.iterrows():
-        print(f"⚽ {row['LIGA']}")
-        partidos = extraer_partidos(row["BETPLAY"], row["LIGA"])
-        todos.extend(partidos)
-        np_ligas.append(len(partidos))
+        if row["ENCENDIDO"] is True:
+            print(f"Extrayendo {row['LIGA']}...")
+            partidos = extraer_partidos(row["BETPLAY"])
+            todos_los_partidos.extend(partidos)
+            np_por_liga[row["BETPLAY"]] = len(partidos)
 
-    df_final = pd.DataFrame(todos)
-
-    print("💾 Respaldando BETPLAYULTIMO → BETPLAYPREVIO")
+    print("💾 Respaldando BETPLAYULTIMO...")
     respaldar_betplay()
 
-    print("💾 Guardando BETPLAYULTIMO")
-    guardar_betplay(df_final)
+    print("💾 Guardando partidos...")
+    guardar_partidos(todos_los_partidos)
 
-    print("🔢 Actualizando NP BETPLAY")
-    actualizar_np(np_ligas)
+    print("🔢 Actualizando NP BETPLAY...")
+    actualizar_np(ligas, np_por_liga)
 
-    print("📅 Actualizando FECHAS")
-    actualizar_fechas(len(df_final))
+    print("📅 Actualizando FECHAS...")
+    actualizar_fechas(len(todos_los_partidos))
 
-    print("✅ SCRAPER BETPLAY FINALIZADO CORRECTAMENTE")
-
-# =========================================================
+    print("✅ BETPLAY actualizado correctamente")
 
 if __name__ == "__main__":
     main()
