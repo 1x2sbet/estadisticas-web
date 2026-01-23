@@ -11,7 +11,13 @@ from playwright.sync_api import sync_playwright
 # -----------------------
 SCOPE = ["https://spreadsheets.google.com/feeds", "https://www.googleapis.com/auth/drive"]
 creds_json = """${{ secrets.GOOGLE_CREDS }}"""  # Secreto GitHub
-creds = ServiceAccountCredentials.from_json_keyfile_dict(eval(creds_json), SCOPE)
+import json
+from oauth2client.service_account import ServiceAccountCredentials
+
+creds_json = os.environ["GOOGLE_CREDS"]
+creds_dict = json.loads(creds_json)  # convertir string JSON en dict
+creds = ServiceAccountCredentials.from_json_keyfile_dict(creds_dict, SCOPE)
+
 gc = gspread.authorize(creds)
 
 # LIBROS
