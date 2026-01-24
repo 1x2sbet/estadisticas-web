@@ -6,7 +6,7 @@ import os
 import json
 import re
 from playwright.sync_api import sync_playwright, TimeoutError
-import pytz
+from zoneinfo import ZoneInfo
 
 # ==============================
 # CONFIGURACIÓN
@@ -20,7 +20,7 @@ HOJA_PREVIO = "BETPLAYPREVIO"
 HOJA_NP = "NP"
 HOJA_FECHAS = "FECHAS"
 
-TZ_BOGOTA = pytz.timezone("America/Bogota")
+TZ_BOGOTA = ZoneInfo("America/Bogota")
 
 # ==============================
 # AUTENTICACIÓN
@@ -43,7 +43,6 @@ def leer_ligas():
     df = pd.read_csv(URL_LIGAS_CSV)
     df.columns = [c.strip().upper() for c in df.columns]
 
-    # Normalizar ENCENDIDO
     df["ENCENDIDO"] = df["ENCENDIDO"].astype(str).str.upper().isin(["TRUE", "1", "SI", "YES"])
     df["FILA_REAL"] = df.index + 2
 
