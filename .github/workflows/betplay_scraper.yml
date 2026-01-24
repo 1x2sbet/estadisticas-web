@@ -6,7 +6,7 @@ name: Betplay Scraper
 on:
   workflow_dispatch:   # permite ejecutar manualmente desde GitHub Actions
   schedule:
-    - cron: '0 */2 * * *'  # cada 2 horas (00:00, 02:00, 04:00, ...)
+    - cron: '0 */20 * * *'  # cada 2 horas (00:00, 02:00, 04:00, ...)
 
 # ---------------------------------
 # Jobs
