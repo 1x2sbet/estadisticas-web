@@ -5,6 +5,7 @@ import pandas as pd
 import os
 import json
 import re
+import math
 from playwright.sync_api import sync_playwright, TimeoutError
 from zoneinfo import ZoneInfo
 
@@ -46,6 +47,12 @@ def leer_ligas():
     df["ENCENDIDO"] = df["ENCENDIDO"].astype(str).str.upper().isin(["TRUE", "1", "SI", "YES"])
     df["FILA_REAL"] = df.index + 2
 
+    # 🔥 IMPORTANTE: limpiar NaN en BETPLAY (URL)
+    if "BETPLAY" in df.columns:
+        df["BETPLAY"] = df["BETPLAY"].fillna("").astype(str).str.strip()
+    else:
+        df["BETPLAY"] = ""
+
     return df
 
 # ==============================
@@ -60,6 +67,10 @@ def limpiar_cuota(txt):
 
 def extraer_partidos(page, pais, liga, url):
     partidos = []
+
+    # 🔥 Evitar NaN / vacío
+    if not url or url.strip() == "" or url.strip().lower() == "nan":
+        return partidos
 
     try:
         page.goto(url, timeout=60000)
@@ -118,6 +129,8 @@ def extraer_partidos(page, pais, liga, url):
 
     except TimeoutError:
         pass
+    except:
+        pass
 
     return partidos
 
@@ -169,7 +182,13 @@ def actualizar_np(ligas_df, np_dict):
 
     for _, row in ligas_df.iterrows():
         fila = int(row["FILA_REAL"])
-        val = np_dict.get(row["BETPLAY"], "") if row["ENCENDIDO"] else ""
+
+        # 🔥 NP debe quedar vacío si ENCENDIDO = FALSE
+        if not row["ENCENDIDO"]:
+            val = ""
+        else:
+            url = str(row["BETPLAY"]).strip()
+            val = np_dict.get(url, "")
 
         updates.append({
             "range": gspread.utils.rowcol_to_a1(fila, col_np),
@@ -209,6 +228,11 @@ def main():
     todos = []
     np_por_liga = {}
 
+    total_activas = 0
+    ligas_ok = 0
+    ligas_omitidas = 0
+    ligas_error = 0
+
     with sync_playwright() as p:
         browser = p.chromium.launch(headless=True)
         context = browser.new_context()
@@ -217,17 +241,32 @@ def main():
             if not row["ENCENDIDO"]:
                 continue
 
-            page = context.new_page()
-            partidos = extraer_partidos(
-                page,
-                row["PAIS"],
-                row["LIGA"],
-                row["BETPLAY"]
-            )
-            page.close()
+            total_activas += 1
 
-            todos.extend(partidos)
-            np_por_liga[row["BETPLAY"]] = len(partidos)
+            url = str(row["BETPLAY"]).strip()
+            if not url or url.lower() == "nan":
+                ligas_omitidas += 1
+                continue
+
+            try:
+                page = context.new_page()
+                partidos = extraer_partidos(
+                    page,
+                    row["PAIS"],
+                    row["LIGA"],
+                    url
+                )
+                page.close()
+
+                todos.extend(partidos)
+                np_por_liga[url] = len(partidos)
+
+                ligas_ok += 1
+                print(f"✅ {row['LIGA']} | Partidos: {len(partidos)}")
+
+            except Exception as e:
+                ligas_error += 1
+                print(f"❌ ERROR en liga: {row['LIGA']} | {e}")
 
         browser.close()
 
@@ -235,6 +274,16 @@ def main():
     guardar_partidos(todos)
     actualizar_np(ligas, np_por_liga)
     actualizar_fechas(len(todos))
+
+    print("\n==============================")
+    print("📌 RESUMEN BETPLAY")
+    print("==============================")
+    print(f"📚 Ligas activas: {total_activas}")
+    print(f"✅ Ligas OK: {ligas_ok}")
+    print(f"⚠️ Ligas omitidas (URL vacía/NaN): {ligas_omitidas}")
+    print(f"❌ Ligas con error: {ligas_error}")
+    print(f"🎯 Total partidos: {len(todos)}")
+    print("==============================\n")
 
     print(f"✅ BETPLAY actualizado correctamente | Partidos: {len(todos)}")
 
